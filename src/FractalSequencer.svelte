@@ -27,8 +27,7 @@
   {/if}
 
   {#if started}
-    <div id="fractal-sequencer" class="center"
-         in:fade>
+    <div id="fractal-sequencer" class="center" in:fade>
       <Synth />
       <Sequencer />
     </div>
@@ -39,7 +38,7 @@
   :root {
     /* TODO - Check font */
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans',
-    'Helvetica Neue', sans-serif;
+      'Helvetica Neue', sans-serif;
   }
 
   :global(body), :global(html) {
@@ -49,6 +48,7 @@
   main {
     text-align: center;
     margin: 0 auto;
+    width: 100vw;
     height: 100vh;
   }
 
@@ -57,7 +57,7 @@
   }
 
   #fractal-sequencer {
-    background: #02161c;
+    background: #444;
   }
 
   .center {

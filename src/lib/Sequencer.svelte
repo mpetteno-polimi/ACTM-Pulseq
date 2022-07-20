@@ -1,6 +1,7 @@
 <script>
   import { synthStore } from '../stores.js';
   import * as Tone from "tone";
+  import Knob from "./ui/Knob.svelte";
 
   // Get synth object from stores
   let synth;
@@ -22,7 +23,9 @@
   }
 </script>
 
-<main>
+<div id="sequencer">
+  <Knob />
+
   <button on:click={startSequence}>
     Loop start
   </button>
@@ -30,8 +33,14 @@
   <button on:click={stopSequence}>
     Loop stop
   </button>
-</main>
+</div>
 
 <style>
+
+  #sequencer {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
 
 </style>
