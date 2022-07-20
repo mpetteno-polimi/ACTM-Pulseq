@@ -1,56 +1,45 @@
 <script>
-  import logo from './assets/svelte.png' // TODO - Change with Fractal Sequencer logo
+  import { fade } from 'svelte/transition';
   import * as Tone from 'tone'
   import Synth from './lib/Synth.svelte'
   import Sequencer from "./lib/Sequencer.svelte";
+  import Logo from "./lib/ui/Logo.svelte";
 
-  let audioContextStartPromise;
   let started = false;
-
   async function startAudioContext() {
-    return await Tone.start();
+    try {
+      await Tone.start();
+    } catch (error) {}
+    started = true;
   }
 
-  function startFractalSequencer() {
-    audioContextStartPromise = startAudioContext();
-  }
 </script>
 
 <main>
+  {#if !started}
+    <div id="splash-screen" class="center"
+         on:click={startAudioContext}
+         on:keydown={startAudioContext}
+         out:fade>
+      <Logo />
+      <p>Click anywhere or press a key to start</p>
+    </div>
+  {/if}
 
-  <div class="center">
-    <img src={logo} alt="Fractal Sequencer Logo" />
-
-    <!-- AudioContext must be initialize by user interaction -->
-    <button on:click={startFractalSequencer}>
-      Start <!-- TODO - Change with better name -->
-    </button>
-
-    <!-- TODO - Change labels -->
-    {#if audioContextStartPromise != null}
-      {#await audioContextStartPromise}
-        <p>Loading audio context...</p>
-      {:then value}
-        {started = true}
-      {:catch error}
-        <p>Audio context failed to start.</p>
-      {/await}
-    {/if}
-  </div>
-
-  <!-- <Synth />
-  <Sequencer /> -->
+  {#if started}
+    <div id="fractal-sequencer" class="center"
+         in:fade>
+      <Synth />
+      <Sequencer />
+    </div>
+  {/if}
 </main>
 
 <style>
   :root {
+    /* TODO - Check font */
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans',
     'Helvetica Neue', sans-serif;
-  }
-  @keyframes gradient {
-    0% { background-position: 0 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0 50%; }
   }
 
   :global(body), :global(html) {
@@ -61,8 +50,14 @@
     text-align: center;
     margin: 0 auto;
     height: 100vh;
-    background-image: radial-gradient(circle, #515151, #47464e, #3c3c4c, #313249, #232947, #1b2442, #13203e, #091b39,
-    #0b1931, #0d1728, #0f1520, #0f1218);
+  }
+
+  #splash-screen {
+    background: black;
+  }
+
+  #fractal-sequencer {
+    background: #02161c;
   }
 
   .center {
@@ -74,8 +69,9 @@
     min-height: 100vh;
   }
 
-  img {
-    height: 16rem;
-    width: 16rem;
+  p {
+    color: whitesmoke;
+    margin: 30px 0;
   }
+
 </style>
