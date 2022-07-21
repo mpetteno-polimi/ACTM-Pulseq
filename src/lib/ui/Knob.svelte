@@ -1,6 +1,4 @@
 <script>
-    import Tick from "./Tick.svelte";
-
     /* -- Props -- */
     export let size = 80;
     export let numTicks = 7;
@@ -54,7 +52,10 @@
     <div class="ticks">
         {#each Array.from({ length: (endAngle - startAngle) / (fullAngle / numTicks) + 1}, (_, i) => startAngle +
             (i * (fullAngle / numTicks))) as tickDegree, index}
-            <Tick size={margin + size / 2} degree={tickDegree} activeDegree="{currentDegree}"/>
+            <div class={tickDegree <= currentDegree ? "tick active" : "tick"}
+                 style="--height: {margin + size/2 + 10}px; --left: {margin + size/2 - 1}px;
+                 --top: {margin + size/2 + 2}px; --rotation: {tickDegree};">
+            </div>
         {/each}
     </div>
     <div class="knob outer"
@@ -80,6 +81,23 @@
         position: absolute;
     }
 
+    .tick {
+        height: var(--height);
+        width: 3px;
+        left: var(--left);
+        top: var(--top);
+        transform: rotate(calc(var(--rotation) * 1deg));
+        transform-origin: top;
+        position: absolute;
+        background: black;
+        box-shadow: inset 0 0 0 0 black;
+        transition: box-shadow 0.5s;
+    }
+
+    .tick.active {
+        box-shadow: inset 0 0 5px 2px #509eec, 0 0 0 1px #369;
+    }
+
     .inner {
         border-radius: 50%;
         transform: rotate(calc(var(--rotation) * 1deg));
@@ -91,8 +109,7 @@
         border-bottom: 5px solid #222;
         box-shadow: 0 5px 15px 2px black, 0 0 5px 3px black, 0 0 0 12px #444;
         margin: var(--margin);
-        background-image: radial-gradient(
-                100% 70%,
+        background-image: radial-gradient(100% 70%,
                 hsl(210,calc(var(--rotation) * 1%),calc(var(--rotation) / 5 * 1%)),
                 hsl(var(--random),20%,calc(var(--rotation) / 36 * 1%))
         );
