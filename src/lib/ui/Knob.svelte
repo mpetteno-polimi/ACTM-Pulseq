@@ -100,7 +100,7 @@
 </script>
 
 
-<svelte:window on:mouseup={endDrag}
+<svelte:window on:mouseup|preventDefault={endDrag}
                on:keydown|preventDefault={enableAlternativeMode}
                on:keyup|preventDefault={disableAlternativeMode}/>
 
