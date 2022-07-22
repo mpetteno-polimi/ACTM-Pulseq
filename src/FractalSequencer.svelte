@@ -3,7 +3,7 @@
   import * as Tone from 'tone'
   import Synth from './lib/Synth.svelte'
   import Sequencer from "./lib/Sequencer.svelte";
-  import Logo from "./lib/ui/Logo.svelte";
+  import Logo from "./lib/Logo.svelte";
 
   let started = false;
   async function startAudioContext() {

@@ -1,11 +1,17 @@
 <script>
+    import { fade } from 'svelte/transition';
+
     /* -- Props -- */
-    export let size = 80;
+    export let size = 60;
     export let numTicks = 7;
     export let degrees = 270;
     export let minValue = 10;
     export let maxValue = 30;
     export let currentValue = 19;
+    export let minValueAlt = 30;
+    export let maxValueAlt = 50;
+    export let currentValueAlt = 39;
+    export let functionLabel = "test";
 
     /* -- State -- */
     let fullAngle = degrees;
@@ -13,55 +19,108 @@
     let endAngle = startAngle + degrees;
     let margin = size * 0.15;
     let currentDegree = convertRange(minValue, maxValue, startAngle, endAngle, currentValue);
+    let currentDegreeAlt = convertRange(minValueAlt, maxValueAlt, startAngle, endAngle, currentValueAlt);
+    let selectedDegree = currentDegree;
+    let selectedValue = currentValue;
+    let isControlMode = false;
+    let startDragPoint;
 
+    /* -- Start knob drag handler -- */
+    function startDrag(event) {
+        const knobRect = event.target.getBoundingClientRect();
+        startDragPoint = {
+            x: knobRect.left + knobRect.width / 2,
+            y: knobRect.top + knobRect.height / 2
+        };
+        window.addEventListener("mousemove", rotateKnob);
+    }
+
+    /* -- End knob drag handler -- */
+    function endDrag(event) {
+        startDragPoint = null;
+        window.removeEventListener("mousemove", rotateKnob);
+    }
+
+    /* -- Rotate knob on drag handler -- */
+    function rotateKnob(event) {
+        if (isControlMode) {
+            currentDegreeAlt = getCurrentDegree(event.clientX, event.clientY, startDragPoint);
+            if (currentDegreeAlt === startAngle) currentDegreeAlt--;
+            currentValueAlt = convertRange(startAngle, endAngle, minValueAlt, maxValueAlt, currentDegreeAlt);
+            updateCurrentSelection(currentDegreeAlt, currentValueAlt);
+        } else {
+            currentDegree = getCurrentDegree(event.clientX, event.clientY, startDragPoint);
+            if (currentDegree === startAngle) currentDegree--;
+            currentValue = convertRange(startAngle, endAngle, minValue, maxValue, currentDegree);
+            updateCurrentSelection(currentDegree, currentValue);
+        }
+    }
+
+    /* -- Enable knob's control mode on Ctrl key pressed -- */
+    function enableAlternativeMode(event) {
+        if (event.repeat) return;
+        switch (event.key) {
+            case "Control":
+                isControlMode = true;
+                updateCurrentSelection(currentDegreeAlt, currentValueAlt);
+                break;
+        }
+    }
+
+    /* -- Disable knob's control mode on Ctrl key released -- */
+    function disableAlternativeMode(event) {
+        if (event.repeat) return;
+        switch (event.key) {
+            case "Control":
+                isControlMode = false;
+                updateCurrentSelection(currentDegree, currentValue);
+                break;
+        }
+    }
+
+    /* -- Update current degree and value selection -- */
+    function updateCurrentSelection(degree, value) {
+        selectedDegree = degree;
+        selectedValue = value;
+    }
+
+    /* -- Converts current degree to value and viceversa -- */
     function convertRange(oldMin, oldMax, newMin, newMax, oldValue) {
         return Math.floor((oldValue - oldMin) * (newMax - newMin) / (oldMax - oldMin) + newMin);
     }
 
-    function startDrag(event) {
-        const knob = event.target.getBoundingClientRect();
-        const pts = {
-            x: knob.left + knob.width / 2,
-            y: knob.top + knob.height / 2
-        };
-        const moveHandler = e => {
-            currentDegree = getDegree(e.clientX, e.clientY, pts);
-            if (currentDegree === startAngle) currentDegree--;
-            currentValue = convertRange(startAngle, endAngle, minValue, maxValue, currentDegree);
-        };
-        document.addEventListener("mousemove", moveHandler);
-        document.addEventListener("mouseup", e => {
-            document.removeEventListener("mousemove", moveHandler);
-        });
-    }
-
-    function getDegree(cX, cY, pts) {
+    /* -- Returns the current degree -- */
+    function getCurrentDegree(cX, cY, pts) {
         const x = cX - pts.x;
         const y = cY - pts.y;
         let deg = Math.atan(y / x) * 180 / Math.PI;
-        if ((x < 0 && y >= 0) || (x < 0 && y < 0)) {
-            deg += 90;
-        } else {
-            deg += 270;
-        }
+        deg += (x < 0 && y >= 0) || (x < 0 && y < 0) ? 90 : 270;
         return Math.min(Math.max(startAngle, deg), endAngle);
     }
 </script>
 
-<div class="knob" style="--size: {size}px;">
+
+<svelte:window on:mouseup={endDrag}
+               on:keydown|preventDefault={enableAlternativeMode}
+               on:keyup|preventDefault={disableAlternativeMode}/>
+
+{#if isControlMode}
+    <span class="label" in:fade out:fade>{functionLabel}</span>
+{/if}
+<div class="knob" style="--size: {size + 20}px;">
     <div class="ticks">
         {#each Array.from({ length: (endAngle - startAngle) / (fullAngle / numTicks) + 1}, (_, i) => startAngle +
             (i * (fullAngle / numTicks))) as tickDegree, index}
-            <div class={tickDegree <= currentDegree ? "tick active" : "tick"}
+            <div class={tickDegree <= selectedDegree ? "tick active" : "tick"}
                  style="--height: {margin + size/2 + 10}px; --left: {margin + size/2 - 1}px;
                  --top: {margin + size/2 + 2}px; --rotation: {tickDegree};">
             </div>
         {/each}
     </div>
     <div class="knob outer"
-         style="--size: {size}px; --margin: {margin}px; --rotation: {currentDegree}; --random: {Math.random()*100}"
+         style="--size: {size}px; --margin: {margin}px; --rotation: {selectedDegree}; --random: {Math.random()*100}"
          on:mousedown|preventDefault={startDrag}>
-        <div class="knob inner" style="--size: {size}px; --rotation: {currentDegree};">
+        <div class="knob inner" style="--size: {size}px; --rotation: {selectedDegree};">
             <div class="grip"></div>
         </div>
     </div>
@@ -75,6 +134,12 @@
         height: var(--size);
         display: flex;
         position: relative;
+    }
+
+    .label {
+        color: azure;
+        position: absolute;
+        bottom: 100px;
     }
 
     .knob .ticks {
