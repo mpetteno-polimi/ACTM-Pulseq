@@ -28,7 +28,7 @@
   {#each Array(8) as _, i}
     {#if i % 2 === 0}
         <div class="sequencer-item even">
-            <Knob />
+            <Knob tooltipPosition="left"/>
             <div class="horizontal-line"></div>
         </div>
         <div class="sequencer-item even">
@@ -46,7 +46,7 @@
         </div>
         <div class="sequencer-item odd">
             <div class="horizontal-line"></div>
-            <Knob />
+            <Knob tooltipPosition="right"/>
         </div>
     {/if}
   {/each}

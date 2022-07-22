@@ -5,13 +5,14 @@
     export let size = 60;
     export let numTicks = 7;
     export let degrees = 270;
-    export let minValue = 10;
-    export let maxValue = 30;
-    export let currentValue = 19;
+    export let minValue = 1;
+    export let maxValue = 8;
+    export let currentValue = 1;
     export let minValueAlt = 30;
     export let maxValueAlt = 50;
     export let currentValueAlt = 39;
     export let functionLabel = "test";
+    export let tooltipPosition = "left";
 
     /* -- State -- */
     let fullAngle = degrees;
@@ -23,6 +24,7 @@
     let selectedDegree = currentDegree;
     let selectedValue = currentValue;
     let isControlMode = false;
+    let isTooltipEnabled = false;
     let startDragPoint;
 
     /* -- Start knob drag handler -- */
@@ -33,11 +35,13 @@
             y: knobRect.top + knobRect.height / 2
         };
         window.addEventListener("mousemove", rotateKnob);
+        isTooltipEnabled = true;
     }
 
     /* -- End knob drag handler -- */
     function endDrag(event) {
         startDragPoint = null;
+        isTooltipEnabled = false;
         window.removeEventListener("mousemove", rotateKnob);
     }
 
@@ -107,6 +111,17 @@
 {#if isControlMode}
     <span class="label" in:fade out:fade>{functionLabel}</span>
 {/if}
+
+{#if isTooltipEnabled}
+    <div class="tooltip {tooltipPosition}" in:fade out:fade>
+        {#if isControlMode}
+            <span class="label">{currentValueAlt}</span>
+        {:else}
+            <span class="label">{currentValue}</span>
+        {/if}
+    </div>
+{/if}
+
 <div class="knob" style="--size: {size + 20}px;">
     <div class="ticks">
         {#each Array.from({ length: (endAngle - startAngle) / (fullAngle / numTicks) + 1}, (_, i) => startAngle +
@@ -140,6 +155,19 @@
         color: azure;
         position: absolute;
         bottom: 100px;
+    }
+
+    .tooltip {
+        position: absolute;
+        top: 150px;
+    }
+
+    .tooltip.left {
+        right: 150px;
+    }
+
+    .tooltip.right {
+        left: 135px;
     }
 
     .knob .ticks {
