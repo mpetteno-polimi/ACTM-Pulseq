@@ -1,9 +1,9 @@
 <script>
-
+    export let blinkDuration;
 </script>
 
 <div class="led-box">
-    <div class="led"></div>
+    <div class="led" style="--blinkDuration: {blinkDuration}s"></div>
 </div>
 
 <style>
@@ -18,17 +18,25 @@
         margin: 0 auto;
         width: 24px;
         height: 24px;
-        background-color: #24E0FF;
+        background-color: #006;
         border-radius: 50%;
-        box-shadow: rgba(0, 0, 0, 0.2) 0 -1px 7px 1px, inset #006 0 -1px 9px, #3F8CFF 0 2px 14px;
-        -webkit-animation: blink 1s infinite;
-        animation: blink 1s infinite;
+        box-shadow: rgba(0, 0, 0, 0.2) 0 -1px 7px 1px, inset #3F8CFF 0 -1px 9px, #24E0FF 0 2px 0;
+        -webkit-animation: blink var(--blinkDuration);
+        animation: blink var(--blinkDuration);
     }
 
     @keyframes blink {
-        from { background-color: #24E0FF; }
-        50% { background-color: #006; box-shadow: rgba(0, 0, 0, 0.2) 0 -1px 7px 1px, inset #3F8CFF 0 -1px 9px, #24E0FF 0 2px 0; }
-        to { background-color: #24E0FF; }
+        from {
+            background-color: #006;
+            box-shadow: rgba(0, 0, 0, 0.2) 0 -1px 7px 1px, inset #3F8CFF 0 -1px 9px, #24E0FF 0 2px 0;
+        }
+        50% {
+            background-color: #24E0FF;
+        }
+        to {
+            background-color: #006;
+            box-shadow: rgba(0, 0, 0, 0.2) 0 -1px 7px 1px, inset #3F8CFF 0 -1px 9px, #24E0FF 0 2px 0;
+        }
     }
 
 </style>

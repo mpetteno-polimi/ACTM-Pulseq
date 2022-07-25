@@ -1,31 +1,47 @@
+<script context="module">
+    /* -- Converts current degree to value and viceversa -- */
+    export function convertRange(oldMin, oldMax, newMin, newMax, oldValue) {
+        return Math.floor((oldValue - oldMin) * (newMax - newMin) / (oldMax - oldMin) + newMin);
+    }
+</script>
+
 <script>
-    import { fade } from 'svelte/transition';
+    import {fade} from 'svelte/transition';
+    import {createEventDispatcher} from 'svelte';
+
+    /* -- Event dispatcher -- */
+    const dispatch = createEventDispatcher();
 
     /* -- Props -- */
+    export let id;
     export let size = 60;
     export let numTicks = 7;
     export let degrees = 270;
-    export let minValue = 1;
-    export let maxValue = 8;
-    export let currentValue = 1;
-    export let minValueAlt = 30;
-    export let maxValueAlt = 50;
-    export let currentValueAlt = 39;
-    export let functionLabel = "test";
+    export let label = "";
     export let tooltipPosition = "left";
+    export let minValueIndex = 0;
+    export let maxValueIndex = 7;
+    export let valueIndex = 0;
+    export let values = [""];
+    export let selectedValue = values[valueIndex];
+    export let degree = 45;
 
-    /* -- State -- */
+    /* -- Variables -- */
     let fullAngle = degrees;
     let startAngle = (360 - degrees) / 2;
     let endAngle = startAngle + degrees;
     let margin = size * 0.15;
-    let currentDegree = convertRange(minValue, maxValue, startAngle, endAngle, currentValue);
-    let currentDegreeAlt = convertRange(minValueAlt, maxValueAlt, startAngle, endAngle, currentValueAlt);
-    let selectedDegree = currentDegree;
-    let selectedValue = currentValue;
-    let isControlMode = false;
     let isTooltipEnabled = false;
     let startDragPoint;
+
+    function dispatchValueChangedEvent() {
+        dispatch("knobValueChanged", {
+            knobId: id,
+            index: valueIndex,
+            deg: degree,
+            value: selectedValue
+        });
+    }
 
     /* -- Start knob drag handler -- */
     function startDrag(event) {
@@ -47,50 +63,10 @@
 
     /* -- Rotate knob on drag handler -- */
     function rotateKnob(event) {
-        if (isControlMode) {
-            currentDegreeAlt = getCurrentDegree(event.clientX, event.clientY, startDragPoint);
-            if (currentDegreeAlt === startAngle) currentDegreeAlt--;
-            currentValueAlt = convertRange(startAngle, endAngle, minValueAlt, maxValueAlt, currentDegreeAlt);
-            updateCurrentSelection(currentDegreeAlt, currentValueAlt);
-        } else {
-            currentDegree = getCurrentDegree(event.clientX, event.clientY, startDragPoint);
-            if (currentDegree === startAngle) currentDegree--;
-            currentValue = convertRange(startAngle, endAngle, minValue, maxValue, currentDegree);
-            updateCurrentSelection(currentDegree, currentValue);
-        }
-    }
-
-    /* -- Enable knob's control mode on Ctrl key pressed -- */
-    function enableAlternativeMode(event) {
-        if (event.repeat) return;
-        switch (event.key) {
-            case "Control":
-                isControlMode = true;
-                updateCurrentSelection(currentDegreeAlt, currentValueAlt);
-                break;
-        }
-    }
-
-    /* -- Disable knob's control mode on Ctrl key released -- */
-    function disableAlternativeMode(event) {
-        if (event.repeat) return;
-        switch (event.key) {
-            case "Control":
-                isControlMode = false;
-                updateCurrentSelection(currentDegree, currentValue);
-                break;
-        }
-    }
-
-    /* -- Update current degree and value selection -- */
-    function updateCurrentSelection(degree, value) {
-        selectedDegree = degree;
-        selectedValue = value;
-    }
-
-    /* -- Converts current degree to value and viceversa -- */
-    function convertRange(oldMin, oldMax, newMin, newMax, oldValue) {
-        return Math.floor((oldValue - oldMin) * (newMax - newMin) / (oldMax - oldMin) + newMin);
+        degree = getCurrentDegree(event.clientX, event.clientY, startDragPoint);
+        valueIndex = convertRange(startAngle, endAngle, minValueIndex, maxValueIndex, degree);
+        selectedValue = values[valueIndex];
+        dispatchValueChangedEvent();
     }
 
     /* -- Returns the current degree -- */
@@ -104,38 +80,32 @@
 </script>
 
 
-<svelte:window on:mouseup|preventDefault={endDrag}
-               on:keydown|preventDefault={enableAlternativeMode}
-               on:keyup|preventDefault={disableAlternativeMode}/>
+<svelte:window on:mouseup|preventDefault={endDrag}/>
 
-{#if isControlMode}
-    <span class="label" in:fade out:fade>{functionLabel}</span>
+{#if label}
+    <span class="label" in:fade out:fade>{label}</span>
 {/if}
 
 {#if isTooltipEnabled}
-    <div class="tooltip {tooltipPosition}" in:fade out:fade>
-        {#if isControlMode}
-            <span class="label">{currentValueAlt}</span>
-        {:else}
-            <span class="label">{currentValue}</span>
-        {/if}
+    <div class="tooltip {tooltipPosition}">
+        <span class="label">{selectedValue}</span>
     </div>
 {/if}
 
 <div class="knob" style="--size: {size + 20}px;">
     <div class="ticks">
-        {#each Array.from({ length: (endAngle - startAngle) / (fullAngle / numTicks) + 1}, (_, i) => startAngle +
+        {#each Array.from({length: (endAngle - startAngle) / (fullAngle / numTicks) + 1}, (_, i) => startAngle +
             (i * (fullAngle / numTicks))) as tickDegree, index}
-            <div class={tickDegree <= selectedDegree ? "tick active" : "tick"}
+            <div class={tickDegree <= (degree + 1) ? "tick active" : "tick"}
                  style="--height: {margin + size/2 + 10}px; --left: {margin + size/2 - 1}px;
                  --top: {margin + size/2 + 2}px; --rotation: {tickDegree};">
             </div>
         {/each}
     </div>
     <div class="knob outer"
-         style="--size: {size}px; --margin: {margin}px; --rotation: {selectedDegree}; --random: {Math.random()*100}"
+         style="--size: {size}px; --margin: {margin}px; --rotation: {(degree + 1)}; --random: {Math.random()*100}"
          on:mousedown|preventDefault={startDrag}>
-        <div class="knob inner" style="--size: {size}px; --rotation: {selectedDegree};">
+        <div class="knob inner" style="--size: {size}px; --rotation: {(degree + 1)};">
             <div class="grip"></div>
         </div>
     </div>
@@ -203,8 +173,8 @@
         box-shadow: 0 5px 15px 2px black, 0 0 5px 3px black, 0 0 0 12px #444;
         margin: var(--margin);
         background-image: radial-gradient(100% 70%,
-                hsl(210,calc(var(--rotation) * 1%),calc(var(--rotation) / 5 * 1%)),
-                hsl(var(--random),20%,calc(var(--rotation) / 36 * 1%))
+        hsl(210, calc(var(--rotation) * 1%), calc(var(--rotation) / 5 * 1%)),
+        hsl(var(--random), 20%, calc(var(--rotation) / 36 * 1%))
         );
     }
 
