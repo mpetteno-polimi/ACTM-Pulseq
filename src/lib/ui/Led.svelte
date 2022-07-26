@@ -1,9 +1,10 @@
 <script>
-    export let blinkDuration;
+    export let isBlinking = false;
+    export let blinkDuration = 0.5;
 </script>
 
 <div class="led-box">
-    <div class="led" style="--blinkDuration: {blinkDuration}s"></div>
+    <div class="led" class:animate="{isBlinking}" style="--blinkDuration: {blinkDuration}s"></div>
 </div>
 
 <style>
@@ -21,6 +22,9 @@
         background-color: #006;
         border-radius: 50%;
         box-shadow: rgba(0, 0, 0, 0.2) 0 -1px 7px 1px, inset #3F8CFF 0 -1px 9px, #24E0FF 0 2px 0;
+    }
+
+    .led.animate {
         -webkit-animation: blink var(--blinkDuration);
         animation: blink var(--blinkDuration);
     }

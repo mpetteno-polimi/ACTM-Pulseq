@@ -7,7 +7,7 @@
 
 <script>
     import {fade} from 'svelte/transition';
-    import {createEventDispatcher} from 'svelte';
+    import {createEventDispatcher, onMount} from 'svelte';
 
     /* -- Event dispatcher -- */
     const dispatch = createEventDispatcher();
@@ -33,6 +33,10 @@
     let margin = size * 0.15;
     let isTooltipEnabled = false;
     let startDragPoint;
+
+    onMount(() => {
+        dispatchValueChangedEvent();
+    })
 
     function dispatchValueChangedEvent() {
         dispatch("knobValueChanged", {

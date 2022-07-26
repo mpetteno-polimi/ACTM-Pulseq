@@ -8,7 +8,8 @@
     /* -- Constants -- */
     const STEP_NUMBER = 8;
     const STEP_TIME = "4n";
-    const DEFAULT_MELODY = Array(STEP_NUMBER).fill(0);
+    const DEFAULT_MELODY = Array(STEP_NUMBER).fill(0).map(() => (Math.floor(Math.random() * STEP_NUMBER)));
+    const VELOCITY_MIN = 0.5;
 
     /* -- Modes -- */
     const MODES = {
@@ -28,7 +29,7 @@
             minValueIndex: 0,
             maxValueIndex: 7,
             values: ["", "A3", "B3", "C3", "D3", "E3", "F3", "G3"],
-            degree: convertRange(0, 7, 45, 315, 0)
+            degree: convertRange(0, 7, 45, 315, DEFAULT_MELODY[index])
         };
     });
 
@@ -117,10 +118,14 @@
     let activeKnobs = knobsMatrix[DEFAULT_MODE];
 
     /* -- LEDs -- */
-    let leds = [];
+    const BLINK_DURATION = 0.5;
+    let ledsProps = Array(STEP_NUMBER).fill(0).map(() => ({isBlinking: false, blinkDuration: BLINK_DURATION}));
 
     /* -- Steps and Sequence -- */
     let steps = Array(STEP_NUMBER).fill(0).map(() => ({note: "", duration: 1}));
+    steps.forEach((step, index) => {
+        step.id = index;
+    });
     let sequence;
 
     // Get synth object from stores
@@ -136,19 +141,28 @@
 
     function onSequenceStep(time, step) {
         let note = step.note === "" ? null : step.note;
-        let duration = 0.1; // step.duration;
-        // const velocity = random(0.5, 1);
-        synth.triggerAttackRelease(note, duration, time);
+        let gate = 0.1; // step.duration;
+        let velocity = Math.floor(Math.random()) + VELOCITY_MIN;
+        synth.triggerAttackRelease(note, gate, time, velocity);
+        blinkLed(step.id, gate, time);
+    }
+
+    function blinkLed(index, duration, time) {
+        Tone.Draw.schedule(() => {
+            ledsProps[index].isBlinking = true;
+        }, time);
+        Tone.Draw.schedule(() => {
+            ledsProps[index].isBlinking = false;
+        }, time + BLINK_DURATION);
     }
 
     function startSequence() {
-        sequence.start();
+        sequence.start(0);
         Tone.Transport.bpm.value = 80;
         Tone.Transport.start();
     }
 
     function stopSequence() {
-        sequence.stop();
         Tone.Transport.stop();
     }
 
@@ -208,7 +222,7 @@
                 <div class="horizontal-line"></div>
             </div>
             <div class="sequencer-item even">
-                <Led/>
+                <Led bind:isBlinking={ledsProps[i].isBlinking} />
                 <div class="vertical-line"></div>
             </div>
             <div class="sequencer-item even"></div>
@@ -218,7 +232,7 @@
                 {#if i !== STEP_NUMBER - 1}
                     <div class="vertical-line"></div>
                 {/if}
-                <Led/>
+                <Led bind:isBlinking={ledsProps[i].isBlinking} />
             </div>
             <div class="sequencer-item odd">
                 <div class="horizontal-line"></div>
