@@ -6,12 +6,13 @@
     import * as Tonal from "@tonaljs/tonal";
     import Knob from "./ui/Knob.svelte";
     import Led from "./ui/Led.svelte";
+    import {Note} from "@tonaljs/tonal";
 
     /* -- Constants -- */
     const STEP_NUMBER = 8;
     const KNOBS_START_ANGLE = 45;
     const KNOBS_END_ANGLE = 315;
-    const VELOCITY_MIN = 0.5;
+    const VELOCITY_MIN = 0.4;
     const DEFAULT_VALUES = {
         SEQ_LENGHT: {
             minLengthValue: 1,
@@ -92,6 +93,20 @@
             get maxValueIndex() {
                 return this.values.length - 1;
             },
+        },
+        SEQ_REPEAT: {
+            minRepeatValue: 1,
+            maxRepeatValue: 8,
+            initialValue: 1,
+            get values() {
+                return [...Array(this.maxRepeatValue - this.minRepeatValue + 1)].map((_, i) => this.minRepeatValue + i);
+            },
+            get initialIndex() {
+                return this.values.indexOf(this.initialValue);
+            },
+            get maxValueIndex() {
+                return this.values.length - 1;
+            }
         }
     }
     const SEQ_INIT_MELODY = [...Array(STEP_NUMBER)].map(() => (Math.floor(Math.random() * DEFAULT_VALUES.SEQ_SCALE.maxValueIndex)));
@@ -209,11 +224,14 @@
         {
             id: 6,
             label: "repeat",
-            valueIndex: 0,
+            numTicks: DEFAULT_VALUES.SEQ_REPEAT.maxValueIndex,
+            valueIndex: DEFAULT_VALUES.SEQ_REPEAT.initialIndex,
             minValueIndex: 0,
-            maxValueIndex: 7,
-            values: Array.from(Array(STEP_NUMBER + 1).keys()),
-            degree: convertRange(0, 7, 45, 315, 0)
+            maxValueIndex: DEFAULT_VALUES.SEQ_REPEAT.maxValueIndex,
+            values: DEFAULT_VALUES.SEQ_REPEAT.values,
+            degree: convertRange(0, DEFAULT_VALUES.SEQ_REPEAT.maxValueIndex, KNOBS_START_ANGLE, KNOBS_END_ANGLE,
+                DEFAULT_VALUES.SEQ_REPEAT.initialIndex),
+            selectedValue: DEFAULT_VALUES.SEQ_REPEAT.initialValue
         },
         {
             id: 7,
@@ -237,7 +255,7 @@
     let activeKnobs = knobsMatrix[DEFAULT_MODE];
 
     /* -- LEDs -- */
-    const BLINK_DURATION = 0.5; // TODO - Change blinking duration according to current tempo and time division
+    const BLINK_DURATION = 0.2;
     let ledsProps = [...Array(STEP_NUMBER)].map(() => ({isBlinking: false, blinkDuration: BLINK_DURATION}));
 
     /* -- Steps and Sequence -- */
@@ -255,7 +273,8 @@
         tempo: DEFAULT_VALUES.SEQ_TEMPO.initialValue,
         order: DEFAULT_VALUES.SEQ_ORDER.initialValue,
         transpose: DEFAULT_VALUES.SEQ_TRANSPOSE.initialValue,
-        timeDivision: DEFAULT_VALUES.SEQ_TIME_DIVISION.initialValue
+        timeDivision: DEFAULT_VALUES.SEQ_TIME_DIVISION.initialValue,
+        repeat: DEFAULT_VALUES.SEQ_REPEAT.initialValue
     }
 
     // Get synth object from stores
@@ -271,11 +290,14 @@
     });
 
     function onSequenceStep(time, step) {
-        let note = step.note === "" ? null : step.note;
-        let gate = 0.1; // step.duration;
+        let note = transposeNoteBySemitones(step.note, sequenceState.transpose);
+        let gate = 0.1;
         let velocity = Math.floor(Math.random()) + VELOCITY_MIN;
         synth.triggerAttackRelease(note, gate, time, velocity);
         blinkLed(step.id, gate, time);
+        if (step.id === sequenceState.length - 1 && sequenceState.order === "random") {
+            sequence.events = getStepsForLengthAndOrder(sequenceState.length, sequenceState.order);
+        }
     }
 
     function blinkLed(index, duration, time) {
@@ -406,32 +428,39 @@
                 newSteps = newSteps.concat(pendulumSteps);
                 break;
             case "random":
-                // Random sequence
-                let currentIndex = newSteps.length, randomIndex;
-                // While there remain elements to shuffle.
-                while (currentIndex !== 0) {
-                    // Pick a remaining element.
-                    randomIndex = Math.floor(Math.random() * currentIndex);
-                    currentIndex--;
-                    // And swap it with the current element.
-                    [newSteps[currentIndex], newSteps[randomIndex]] = [
-                        newSteps[randomIndex], newSteps[currentIndex]];
-                }
+                shuffleArray(newSteps);
                 break;
         }
-        return newSteps;
+        return duplicateSteps(newSteps, sequenceState.repeat);
+    }
+
+    function shuffleArray(array) {
+        let currentIndex = array.length, randomIndex;
+        // While there remain elements to shuffle.
+        while (currentIndex !== 0) {
+            // Pick a remaining element.
+            randomIndex = Math.floor(Math.random() * currentIndex);
+            currentIndex--;
+            // And swap it with the current element.
+            [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+        }
     }
 
     function handleSequenceTransposeChange(newValue) {
-        // TODO
+        sequenceState.transpose = newValue;
+    }
+
+    function transposeNoteBySemitones(note, semitones) {
+        let transposeInterval = Tonal.Interval.fromSemitones(semitones);
+        return note === "" ? null : Tonal.Note.transpose(note, transposeInterval);
     }
 
     function handleSequenceTimeDivisionChange(newValue) {
         sequenceState.timeDivision = newValue;
         let newSubdivision = getSequenceSubdivisionForTimeDivision(newValue);
-        let currentStep = getStepsForLengthAndOrder(sequenceState.length, sequenceState.order);
+        let currentSteps = getStepsForLengthAndOrder(sequenceState.length, sequenceState.order);
         sequence.stop();
-        sequence = new Tone.Sequence(onSequenceStep, currentStep, newSubdivision);
+        sequence = new Tone.Sequence(onSequenceStep, currentSteps, newSubdivision);
         sequence.start();
     }
 
@@ -440,7 +469,13 @@
     }
 
     function handleSequenceRepeatChange(newValue) {
-        // TODO
+        // TODO - Fix random order step repetition
+        sequenceState.repeat = newValue;
+        sequence.events = getStepsForLengthAndOrder(sequenceState.length, sequenceState.order);
+    }
+
+    function duplicateSteps(steps, repetitionNumber) {
+        return steps.flatMap(i => Array.from({ length: repetitionNumber }).fill(i))
     }
 
     function handleSequenceSlewChange(newValue) {
