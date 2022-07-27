@@ -1,6 +1,6 @@
 <script>
     export let isBlinking = false;
-    export let blinkDuration = 0.5;
+    export let blinkDuration = 0.35;
 </script>
 
 <div class="led-box">

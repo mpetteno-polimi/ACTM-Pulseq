@@ -1,13 +1,7 @@
-<script context="module">
-    /* -- Converts current degree to value and viceversa -- */
-    export function convertRange(oldMin, oldMax, newMin, newMax, oldValue) {
-        return Math.floor((oldValue - oldMin) * (newMax - newMin) / (oldMax - oldMin) + newMin);
-    }
-</script>
-
 <script>
-    import {fade} from 'svelte/transition';
     import {createEventDispatcher, onMount} from 'svelte';
+    import {fade} from 'svelte/transition';
+    import {convertRange} from "../../utilities.js";
 
     /* -- Event dispatcher -- */
     const dispatch = createEventDispatcher();
@@ -60,6 +54,7 @@
 
     /* -- End knob drag handler -- */
     function endDrag(event) {
+        if (isTooltipEnabled) dispatchValueChangedEvent();
         startDragPoint = null;
         isTooltipEnabled = false;
         window.removeEventListener("mousemove", rotateKnob);
@@ -70,7 +65,6 @@
         degree = getCurrentDegree(event.clientX, event.clientY, startDragPoint);
         valueIndex = convertRange(startAngle, endAngle, minValueIndex, maxValueIndex, degree);
         selectedValue = values[valueIndex];
-        dispatchValueChangedEvent();
     }
 
     /* -- Returns the current degree -- */
@@ -92,12 +86,14 @@
 
 {#if isTooltipEnabled}
     <div class="tooltip {tooltipPosition}">
-        <span class="label">{selectedValue}</span>
+        {#if selectedValue}
+            <span class="label" in:fade out:fade>{selectedValue}</span>
+        {/if}
     </div>
 {/if}
 
 <div class="knob" style="--size: {size + 20}px;">
-    <div class="ticks">
+    <div class="ticks" >
         {#each Array.from({length: (endAngle - startAngle) / (fullAngle / numTicks) + 1}, (_, i) => startAngle +
             (i * (fullAngle / numTicks))) as tickDegree, index}
             <div class={tickDegree <= (degree + 1) ? "tick active" : "tick"}
@@ -107,9 +103,9 @@
         {/each}
     </div>
     <div class="knob outer"
-         style="--size: {size}px; --margin: {margin}px; --rotation: {(degree + 1)}; --random: {Math.random()*100}"
+         style="--size: {size}px; --margin: {margin}px; --rotation: {degree + 1}; --random: {Math.random()*100}"
          on:mousedown|preventDefault={startDrag}>
-        <div class="knob inner" style="--size: {size}px; --rotation: {(degree + 1)};">
+        <div class="knob inner" style="--size: {size}px; --rotation: {degree + 1};">
             <div class="grip"></div>
         </div>
     </div>
