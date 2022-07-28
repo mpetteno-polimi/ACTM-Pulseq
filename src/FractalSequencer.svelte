@@ -24,7 +24,7 @@
              on:keydown={startAudioContext}
              out:fade>
             <Logo/>
-            <p>Click anywhere or press a key to start</p>
+            <p>Click anywhere or press a key to test</p>
         </div>
     {/if}
 
