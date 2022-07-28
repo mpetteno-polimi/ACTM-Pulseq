@@ -1,18 +1,18 @@
 <script>
     import {synthStore} from '../stores.js';
     import {onMount} from "svelte";
-    import {convertRange} from "../utilities.js";
+    import * as Utilities from "../utilities.js";
     import * as Tone from "tone";
     import * as Tonal from "@tonaljs/tonal";
     import Knob from "./ui/Knob.svelte";
     import Led from "./ui/Led.svelte";
-    import {Note} from "@tonaljs/tonal";
 
     /* -- Constants -- */
     const STEP_NUMBER = 8;
     const KNOBS_START_ANGLE = 45;
     const KNOBS_END_ANGLE = 315;
     const VELOCITY_MIN = 0.4;
+    const STEP_DURATION_OFFSET = 0.1;
     const DEFAULT_VALUES = {
         SEQ_LENGHT: {
             minLengthValue: 1,
@@ -83,9 +83,9 @@
         SEQ_TIME_DIVISION: {
             minTimeDivisionValue: 0,
             maxTimeDivisionValue: 8,
-            initialValue: 16,
+            initialValue: 8,
             get values() {
-                return [...Array(this.maxTimeDivisionValue - this.minTimeDivisionValue + 1)].map((_, i) => 2**i);
+                return [...Array(this.maxTimeDivisionValue - this.minTimeDivisionValue + 1)].map((_, i) => 2 ** i);
             },
             get initialIndex() {
                 return this.values.indexOf(this.initialValue);
@@ -100,6 +100,20 @@
             initialValue: 1,
             get values() {
                 return [...Array(this.maxRepeatValue - this.minRepeatValue + 1)].map((_, i) => this.minRepeatValue + i);
+            },
+            get initialIndex() {
+                return this.values.indexOf(this.initialValue);
+            },
+            get maxValueIndex() {
+                return this.values.length - 1;
+            }
+        },
+        SEQ_SLEW: {
+            minSlewValue: 0,
+            maxSlewValue: 10,
+            initialValue: 0,
+            get values() {
+                return [...Array(this.maxSlewValue - this.minSlewValue + 1)].map((_, i) => i / 10);
             },
             get initialIndex() {
                 return this.values.indexOf(this.initialValue);
@@ -131,7 +145,7 @@
                 minValueIndex: 0,
                 maxValueIndex: DEFAULT_VALUES.SEQ_SCALE.initialScaleNotes.length,
                 values: [""].concat(DEFAULT_VALUES.SEQ_SCALE.initialScaleNotes),
-                degree: convertRange(0, DEFAULT_VALUES.SEQ_SCALE.initialScaleNotes.length, KNOBS_START_ANGLE,
+                degree: Utilities.convertRange(0, DEFAULT_VALUES.SEQ_SCALE.initialScaleNotes.length, KNOBS_START_ANGLE,
                     KNOBS_END_ANGLE, SEQ_INIT_MELODY[index])
             }
         }
@@ -157,8 +171,8 @@
             minValueIndex: 0,
             maxValueIndex: DEFAULT_VALUES.SEQ_LENGHT.maxValueIndex,
             values: DEFAULT_VALUES.SEQ_LENGHT.values,
-            degree: convertRange(0, DEFAULT_VALUES.SEQ_LENGHT.maxValueIndex, KNOBS_START_ANGLE, KNOBS_END_ANGLE,
-                DEFAULT_VALUES.SEQ_LENGHT.initialIndex),
+            degree: Utilities.convertRange(0, DEFAULT_VALUES.SEQ_LENGHT.maxValueIndex, KNOBS_START_ANGLE,
+                KNOBS_END_ANGLE, DEFAULT_VALUES.SEQ_LENGHT.initialIndex),
             selectedValue: DEFAULT_VALUES.SEQ_LENGHT.initialValue
         },
         {
@@ -169,8 +183,8 @@
             minValueIndex: 0,
             maxValueIndex: DEFAULT_VALUES.SEQ_TEMPO.maxValueIndex,
             values: DEFAULT_VALUES.SEQ_TEMPO.values,
-            degree: convertRange(0, DEFAULT_VALUES.SEQ_TEMPO.maxValueIndex, KNOBS_START_ANGLE, KNOBS_END_ANGLE,
-                DEFAULT_VALUES.SEQ_TEMPO.initialIndex),
+            degree: Utilities.convertRange(0, DEFAULT_VALUES.SEQ_TEMPO.maxValueIndex, KNOBS_START_ANGLE,
+                KNOBS_END_ANGLE, DEFAULT_VALUES.SEQ_TEMPO.initialIndex),
             selectedValue: DEFAULT_VALUES.SEQ_TEMPO.initialValue
         },
         {
@@ -181,8 +195,8 @@
             minValueIndex: 0,
             maxValueIndex: DEFAULT_VALUES.SEQ_SCALE.maxValueIndex,
             values: DEFAULT_VALUES.SEQ_SCALE.values,
-            degree: convertRange(0, DEFAULT_VALUES.SEQ_SCALE.maxValueIndex, KNOBS_START_ANGLE, KNOBS_END_ANGLE,
-                DEFAULT_VALUES.SEQ_SCALE.initialIndex),
+            degree: Utilities.convertRange(0, DEFAULT_VALUES.SEQ_SCALE.maxValueIndex, KNOBS_START_ANGLE,
+                KNOBS_END_ANGLE, DEFAULT_VALUES.SEQ_SCALE.initialIndex),
             selectedValue: DEFAULT_VALUES.SEQ_SCALE.initialValue
         },
         {
@@ -193,8 +207,8 @@
             minValueIndex: 0,
             maxValueIndex: DEFAULT_VALUES.SEQ_ORDER.maxValueIndex,
             values: DEFAULT_VALUES.SEQ_ORDER.values,
-            degree: convertRange(0, DEFAULT_VALUES.SEQ_ORDER.maxValueIndex, KNOBS_START_ANGLE, KNOBS_END_ANGLE,
-                DEFAULT_VALUES.SEQ_ORDER.initialIndex),
+            degree: Utilities.convertRange(0, DEFAULT_VALUES.SEQ_ORDER.maxValueIndex, KNOBS_START_ANGLE,
+                KNOBS_END_ANGLE, DEFAULT_VALUES.SEQ_ORDER.initialIndex),
             selectedValue: DEFAULT_VALUES.SEQ_ORDER.initialValue
         },
         {
@@ -205,8 +219,8 @@
             minValueIndex: 0,
             maxValueIndex: DEFAULT_VALUES.SEQ_TRANSPOSE.maxValueIndex,
             values: DEFAULT_VALUES.SEQ_TRANSPOSE.values,
-            degree: convertRange(0, DEFAULT_VALUES.SEQ_TRANSPOSE.maxValueIndex, KNOBS_START_ANGLE, KNOBS_END_ANGLE,
-                DEFAULT_VALUES.SEQ_TRANSPOSE.initialIndex),
+            degree: Utilities.convertRange(0, DEFAULT_VALUES.SEQ_TRANSPOSE.maxValueIndex, KNOBS_START_ANGLE,
+                KNOBS_END_ANGLE, DEFAULT_VALUES.SEQ_TRANSPOSE.initialIndex),
             selectedValue: DEFAULT_VALUES.SEQ_TRANSPOSE.initialValue
         },
         {
@@ -217,8 +231,8 @@
             minValueIndex: 0,
             maxValueIndex: DEFAULT_VALUES.SEQ_TIME_DIVISION.maxValueIndex,
             values: DEFAULT_VALUES.SEQ_TIME_DIVISION.values,
-            degree: convertRange(0, DEFAULT_VALUES.SEQ_TIME_DIVISION.maxValueIndex, KNOBS_START_ANGLE, KNOBS_END_ANGLE,
-                DEFAULT_VALUES.SEQ_TIME_DIVISION.initialIndex),
+            degree: Utilities.convertRange(0, DEFAULT_VALUES.SEQ_TIME_DIVISION.maxValueIndex, KNOBS_START_ANGLE,
+                KNOBS_END_ANGLE, DEFAULT_VALUES.SEQ_TIME_DIVISION.initialIndex),
             selectedValue: DEFAULT_VALUES.SEQ_TIME_DIVISION.initialValue
         },
         {
@@ -229,18 +243,21 @@
             minValueIndex: 0,
             maxValueIndex: DEFAULT_VALUES.SEQ_REPEAT.maxValueIndex,
             values: DEFAULT_VALUES.SEQ_REPEAT.values,
-            degree: convertRange(0, DEFAULT_VALUES.SEQ_REPEAT.maxValueIndex, KNOBS_START_ANGLE, KNOBS_END_ANGLE,
-                DEFAULT_VALUES.SEQ_REPEAT.initialIndex),
+            degree: Utilities.convertRange(0, DEFAULT_VALUES.SEQ_REPEAT.maxValueIndex, KNOBS_START_ANGLE,
+                KNOBS_END_ANGLE, DEFAULT_VALUES.SEQ_REPEAT.initialIndex),
             selectedValue: DEFAULT_VALUES.SEQ_REPEAT.initialValue
         },
         {
             id: 7,
             label: "slew",
-            valueIndex: 0,
+            numTicks: DEFAULT_VALUES.SEQ_SLEW.maxValueIndex,
+            valueIndex: DEFAULT_VALUES.SEQ_SLEW.initialIndex,
             minValueIndex: 0,
-            maxValueIndex: 7,
-            values: Array.from(Array(STEP_NUMBER + 1).keys()),
-            degree: convertRange(0, 7, 45, 315, 0)
+            maxValueIndex: DEFAULT_VALUES.SEQ_SLEW.maxValueIndex,
+            values: DEFAULT_VALUES.SEQ_SLEW.values,
+            degree: Utilities.convertRange(0, DEFAULT_VALUES.SEQ_SLEW.maxValueIndex, KNOBS_START_ANGLE,
+                KNOBS_END_ANGLE, DEFAULT_VALUES.SEQ_SLEW.initialIndex),
+            selectedValue: DEFAULT_VALUES.SEQ_SLEW.initialValue
         }
     ];
     let controlKnobs = [...Array(STEP_NUMBER)].map((controlKnobs, index) => (
@@ -255,8 +272,8 @@
     let activeKnobs = knobsMatrix[DEFAULT_MODE];
 
     /* -- LEDs -- */
-    const BLINK_DURATION = 0.2;
-    let ledsProps = [...Array(STEP_NUMBER)].map(() => ({isBlinking: false, blinkDuration: BLINK_DURATION}));
+    const MIN_BLINK_DURATION = 0.2;
+    let ledsProps = [...Array(STEP_NUMBER)].map(() => ({isBlinking: false, blinkDuration: MIN_BLINK_DURATION}));
 
     /* -- Steps and Sequence -- */
     let steps = [...Array(DEFAULT_VALUES.SEQ_LENGHT.initialValue)].map((step, index) => (
@@ -274,7 +291,8 @@
         order: DEFAULT_VALUES.SEQ_ORDER.initialValue,
         transpose: DEFAULT_VALUES.SEQ_TRANSPOSE.initialValue,
         timeDivision: DEFAULT_VALUES.SEQ_TIME_DIVISION.initialValue,
-        repeat: DEFAULT_VALUES.SEQ_REPEAT.initialValue
+        repeat: DEFAULT_VALUES.SEQ_REPEAT.initialValue,
+        slew: DEFAULT_VALUES.SEQ_SLEW.initialValue
     }
 
     // Get synth object from stores
@@ -286,18 +304,16 @@
     onMount(() => {
         let initialTimeDivision = getSequenceSubdivisionForTimeDivision(sequenceState.timeDivision);
         sequence = new Tone.Sequence(onSequenceStep, steps, initialTimeDivision);
-        // startSequence()
+        startSequence()
     });
 
     function onSequenceStep(time, step) {
         let note = transposeNoteBySemitones(step.note, sequenceState.transpose);
-        let gate = 0.1;
+        let duration = sequence.subdivision - (sequence.subdivision > STEP_DURATION_OFFSET ? STEP_DURATION_OFFSET : 0);
         let velocity = Math.floor(Math.random()) + VELOCITY_MIN;
-        synth.triggerAttackRelease(note, gate, time, velocity);
-        blinkLed(step.id, gate, time);
-        if (step.id === sequenceState.length - 1 && sequenceState.order === "random") {
-            sequence.events = getStepsForLengthAndOrder(sequenceState.length, sequenceState.order);
-        }
+        synth.portamento = duration * sequenceState.slew;
+        synth.triggerAttackRelease(note, duration, time, velocity);
+        blinkLed(step.id, duration, time);
     }
 
     function blinkLed(index, duration, time) {
@@ -306,7 +322,7 @@
         }, time);
         Tone.Draw.schedule(() => {
             ledsProps[index].isBlinking = false;
-        }, time + BLINK_DURATION);
+        }, time + (duration < MIN_BLINK_DURATION ? MIN_BLINK_DURATION : duration));
     }
 
     function startSequence() {
@@ -316,6 +332,7 @@
     }
 
     function stopSequence() {
+        sequence.stop();
         Tone.Transport.stop();
     }
 
@@ -327,7 +344,15 @@
                 activeMode = MODES.CONTROL_MODE;
                 activeKnobs = knobsMatrix[MODES.CONTROL_MODE];
                 break;
+            case "m":
+                if (activeMode === MODES.CONTROL_MODE) {
+                    toggleMasterMute();
+                }
         }
+    }
+
+    function toggleMasterMute() {
+        Tone.getDestination().mute = !Tone.getDestination().mute;
     }
 
     /* -- Disable knob's control mode on Ctrl key released -- */
@@ -339,6 +364,10 @@
                 activeKnobs = knobsMatrix[MODES.SEQUENCE_MODE];
                 break;
         }
+    }
+
+    function handleBeforeUnload(event) {
+        stopSequence();
     }
 
     function handleKnobValueChanged(event) {
@@ -391,19 +420,19 @@
     }
 
     function updateNoteKnobsAndSequenceSteps(newScaleNotes) {
-        // TODO - Fix new note rotation degree
         for (let i = 0; i < STEP_NUMBER; i++) {
             let oldNoteIndex = noteKnobs[i].props.valueIndex;
             let oldNoteMaxIndex = noteKnobs[i].props.maxValueIndex;
             let newNoteValues = [""].concat(newScaleNotes);
-            let newNoteIndex = convertRange(0, oldNoteMaxIndex, 1, newScaleNotes.length, oldNoteIndex);
+            let newNoteIndex = Utilities.convertRange(0, oldNoteMaxIndex, 0, newScaleNotes.length, oldNoteIndex);
             noteKnobs[i].props = {
                 ...noteKnobs[i].props,
                 numTicks: newNoteValues.length,
                 valueIndex: newNoteIndex,
                 maxValueIndex: newScaleNotes.length,
                 values: newNoteValues,
-                degree: convertRange(0, newScaleNotes.length, KNOBS_START_ANGLE, KNOBS_END_ANGLE, newNoteIndex),
+                degree: Utilities.convertRange(0, newScaleNotes.length, KNOBS_START_ANGLE, KNOBS_END_ANGLE,
+                    newNoteIndex),
                 selectedValue: newNoteValues[newNoteIndex]
             }
             steps[i].note = newNoteValues[newNoteIndex]
@@ -469,22 +498,23 @@
     }
 
     function handleSequenceRepeatChange(newValue) {
-        // TODO - Fix random order step repetition
         sequenceState.repeat = newValue;
         sequence.events = getStepsForLengthAndOrder(sequenceState.length, sequenceState.order);
     }
 
     function duplicateSteps(steps, repetitionNumber) {
-        return steps.flatMap(i => Array.from({ length: repetitionNumber }).fill(i))
+        return steps.flatMap(i => Array.from({length: repetitionNumber}).fill(i))
     }
 
     function handleSequenceSlewChange(newValue) {
-        // TODO
+        sequenceState.slew = newValue;
     }
 
 </script>
 
-<svelte:window on:keydown|preventDefault={handleKeyDown} on:keyup|preventDefault={handleKeyUp}/>
+<svelte:window on:keydown|preventDefault={handleKeyDown}
+               on:keyup|preventDefault={handleKeyUp}
+               on:beforeunload={handleBeforeUnload}/>
 
 <div id="sequencer">
     {#each activeKnobs as activeKnob, i}
@@ -515,14 +545,6 @@
         {/if}
     {/each}
 </div>
-
-<button on:click={startSequence}>
-    Loop start
-</button>
-
-<button on:click={stopSequence}>
-    Loop stop
-</button>
 
 <style>
 
