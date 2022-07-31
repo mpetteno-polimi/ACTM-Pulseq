@@ -120,7 +120,7 @@
     }
 
     /* ------ NOTE KNOBS PROPS ------ */
-    let noteKnobs = Utilities.getArray(STEP_NUMBER, (_, index) => {
+    let noteKnobsProps = Utilities.getArray(STEP_NUMBER, (_, index) => {
         let initialSequence = NOTE_KNOBS_DEFAULTS.initialSequence;
         let currentKnobInitialValue = NOTE_KNOBS_DEFAULTS.values[initialSequence[index]];
         return getDefaultKnobProps(index, "", NOTE_KNOBS_DEFAULTS.values, currentKnobInitialValue);
@@ -154,7 +154,7 @@
     }
     const DEFAULT_MODE = MODES.SEQUENCE_MODE;
     let activeMode = DEFAULT_MODE;
-    let knobsMatrix = [noteKnobs, controlKnobsProps];
+    let knobsMatrix = [noteKnobsProps, controlKnobsProps];
     let activeKnobs = knobsMatrix[DEFAULT_MODE];
 
     function updateActiveKnobsProps(event) {
@@ -231,12 +231,12 @@
 
     function updateNoteKnobsAndSequenceSteps(newScaleNotes) {
         for (let i = 0; i < STEP_NUMBER; i++) {
-            let oldNoteIndex = noteKnobs[i].valueIndex;
-            let oldNoteMaxIndex = noteKnobs[i].maxValueIndex;
+            let oldNoteIndex = noteKnobsProps[i].valueIndex;
+            let oldNoteMaxIndex = noteKnobsProps[i].maxValueIndex;
             let newNoteValues = [""].concat(newScaleNotes);
             let newNoteIndex = Utilities.convertRange(0, oldNoteMaxIndex, 0, newScaleNotes.length, oldNoteIndex);
             let newStepNote = newNoteValues[newNoteIndex];
-            noteKnobs[i] = getDefaultKnobProps(i, "", newNoteValues, newStepNote);
+            noteKnobsProps[i] = getDefaultKnobProps(i, "", newNoteValues, newStepNote);
             steps[i].note = newStepNote;
         }
     }
