@@ -13,10 +13,10 @@
     export let degrees = 270;
     export let label = "";
     export let tooltipPosition = "left";
-    export let minValueIndex = 0;
-    export let maxValueIndex = 7;
-    export let valueIndex = 0;
     export let values = [""];
+    export let minValueIndex = 0;
+    export let maxValueIndex = values.length - 1;
+    export let valueIndex = 0;
     export let selectedValue = values[valueIndex];
     export let degree = 45;
 
@@ -29,15 +29,16 @@
     let startDragPoint;
 
     onMount(() => {
-        dispatchValueChangedEvent();
+        dispatchValueChangedEvent(true);
     })
 
-    function dispatchValueChangedEvent() {
+    function dispatchValueChangedEvent(isOnMountEvent = false) {
         dispatch("knobValueChanged", {
             knobId: id,
             index: valueIndex,
             deg: degree,
-            value: selectedValue
+            value: selectedValue,
+            isOnMount: isOnMountEvent
         });
     }
 
@@ -77,11 +78,10 @@
     }
 </script>
 
-
 <svelte:window on:mouseup|preventDefault={endDrag}/>
 
 {#if label}
-    <span class="label" in:fade out:fade>{label}</span>
+    <span id="title" class="label" in:fade out:fade>{label}</span>
 {/if}
 
 {#if isTooltipEnabled}
@@ -121,19 +121,21 @@
         position: relative;
     }
 
-    .label {
-        color: azure;
+    #title {
         position: absolute;
         bottom: 100px;
     }
 
+    .label {
+        color: azure;
+    }
+
     .tooltip {
         position: absolute;
-        top: 150px;
     }
 
     .tooltip.left {
-        right: 150px;
+        right: 135px;
     }
 
     .tooltip.right {
