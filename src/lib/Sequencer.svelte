@@ -9,7 +9,11 @@
     /* --------------------------------------------- GLOBAL VARIABLES --------------------------------------------- */
 
     const STEP_NUMBER = 8;
-    const VELOCITY_MIN = 0.5    ;
+    const VELOCITY_MIN = 0.5;
+    const KNOBS_START_ANGLE = 45;
+    const KNOBS_END_ANGLE = 315;
+    const MIN_BLINK_DURATION = 0.2;
+    const DEFAULT_STEP_DURATION = 1;
     const STEP_DURATION_OFFSET = 0.1;
 
     /* -- Get synth object from stores -- */
@@ -20,8 +24,6 @@
 
     /* --------------------------------------------- COMPONENTS PROPS --------------------------------------------- */
 
-    const KNOBS_START_ANGLE = 45;
-    const KNOBS_END_ANGLE = 315;
     const CONTROL_KNOBS_DEFAULTS = [
         {
             label: "length",
@@ -102,7 +104,7 @@
         initialSequence: Utilities.generateMelody(CONTROL_KNOBS_DEFAULTS[2].initialValue, STEP_NUMBER),
     }
 
-    function getDefaultKnobProps(id, label, values, initialValue) {
+    function getKnobProps(id, label, values, initialValue) {
         let initialValueIndex = values.indexOf(initialValue);
         let minValueIndex = 0;
         let maxValueIndex = values.length - 1;
@@ -123,18 +125,17 @@
     let noteKnobsProps = Utilities.getArray(STEP_NUMBER, (_, index) => {
         let initialSequence = NOTE_KNOBS_DEFAULTS.initialSequence;
         let currentKnobInitialValue = NOTE_KNOBS_DEFAULTS.values[initialSequence[index]];
-        return getDefaultKnobProps(index, "", NOTE_KNOBS_DEFAULTS.values, currentKnobInitialValue);
+        return getKnobProps(index, "", NOTE_KNOBS_DEFAULTS.values, currentKnobInitialValue);
     });
 
     /* ------ CONTROL KNOBS PROPS ------ */
     let controlKnobsProps = Utilities.getArray(STEP_NUMBER, (_, index) => {
         let currentKnobDefaults = CONTROL_KNOBS_DEFAULTS[index];
-        return getDefaultKnobProps(index, currentKnobDefaults.label, currentKnobDefaults.values,
+        return getKnobProps(index, currentKnobDefaults.label, currentKnobDefaults.values,
             currentKnobDefaults.initialValue);
     });
 
     /* ------ LEDs PROPS ------ */
-    const MIN_BLINK_DURATION = 0.2;
     let ledsProps = Utilities.getArray(STEP_NUMBER, () => ({isBlinking: false, blinkDuration: MIN_BLINK_DURATION}));
 
     function blinkLed(index, duration, time) {
@@ -166,7 +167,6 @@
 
     /* --------------------------------------------- SEQUENCER STATE --------------------------------------------- */
 
-    const DEFAULT_STEP_DURATION = 1;
     let sequence;
     let sequenceState = {
         length: CONTROL_KNOBS_DEFAULTS[0].initialValue,
@@ -236,7 +236,7 @@
             let newNoteValues = [""].concat(newScaleNotes);
             let newNoteIndex = Utilities.convertRange(0, oldNoteMaxIndex, 0, newScaleNotes.length, oldNoteIndex);
             let newStepNote = newNoteValues[newNoteIndex];
-            noteKnobsProps[i] = getDefaultKnobProps(i, "", newNoteValues, newStepNote);
+            noteKnobsProps[i] = getKnobProps(i, "", newNoteValues, newStepNote);
             steps[i].note = newStepNote;
         }
     }
