@@ -3,13 +3,13 @@
     export let blinkDuration = 0.5;
 </script>
 
-<div class="led-box">
+<led>
     <div class="led" class:animate="{isBlinking}" style="--blinkDuration: {blinkDuration}s"></div>
-</div>
+</led>
 
 <style>
 
-    .led-box {
+    led {
         display: flex;
         justify-content: center;
         align-items: center;

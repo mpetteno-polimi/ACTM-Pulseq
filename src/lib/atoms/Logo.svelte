@@ -34,6 +34,7 @@
             cancelAnimationFrame(frame);
         };
     });
+
 </script>
 
 <canvas bind:this={canvas}></canvas>

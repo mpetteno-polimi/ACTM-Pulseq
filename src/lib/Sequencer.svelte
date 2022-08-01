@@ -1,6 +1,7 @@
 <script>
     import {synthStore} from '../stores.js';
     import {onMount} from "svelte";
+    import {fade} from 'svelte/transition';
     import * as Utilities from "../utilities.js";
     import * as Tone from "tone";
     import Knob from "./atoms/Knob.svelte";
@@ -337,42 +338,56 @@
                on:keyup|preventDefault={handleKeyUp}
                on:beforeunload={handleBeforeUnload}/>
 
-<div id="sequencer">
-    {#each activeKnobs as activeKnob, i}
-        {#if i % 2 === 0}
-            <div class="sequencer-item even">
-                <Knob {...activeKnob} tooltipPosition="left" on:knobValueChanged={handleKnobValueChanged}/>
-                <div class="horizontal-line"></div>
-            </div>
-            <div class="sequencer-item even">
-                <Led bind:isBlinking={ledsProps[i].isBlinking}/>
-                <div class="vertical-line"></div>
-            </div>
-            <div class="sequencer-item even"></div>
-        {:else}
-            <div class="sequencer-item odd"></div>
-            <div class="sequencer-item odd">
-                {#if i !== STEP_NUMBER - 1}
-                    <div class="vertical-line"></div>
-                {/if}
-                <Led bind:isBlinking={ledsProps[i].isBlinking}/>
-            </div>
-            <div class="sequencer-item odd">
-                <div class="horizontal-line"></div>
-                <Knob {...activeKnob} tooltipPosition="right" on:knobValueChanged={handleKnobValueChanged}/>
-            </div>
-        {/if}
-    {/each}
-</div>
+<fractal-sequencer in:fade>
+    <sequencer>
+        {#each activeKnobs as activeKnob, i}
+            {#if i % 2 === 0}
+                <sequencer-item class="even">
+                    <Knob {...activeKnob} tooltipPosition="left" on:knobValueChanged={handleKnobValueChanged}/>
+                    <div class="line horizontal"></div>
+                </sequencer-item>
+                <sequencer-item class="even">
+                    <Led bind:isBlinking={ledsProps[i].isBlinking}/>
+                    <div class="line vertical"></div>
+                </sequencer-item>
+                <sequencer-item class="even"></sequencer-item>
+            {:else}
+                <sequencer-item class="odd"></sequencer-item>
+                <sequencer-item class="odd">
+                    {#if i !== STEP_NUMBER - 1}
+                        <div class="line vertical"></div>
+                    {/if}
+                    <Led bind:isBlinking={ledsProps[i].isBlinking}/>
+                </sequencer-item>
+                <sequencer-item class="odd">
+                    <div class="line horizontal"></div>
+                    <Knob {...activeKnob} tooltipPosition="right" on:knobValueChanged={handleKnobValueChanged}/>
+                </sequencer-item>
+            {/if}
+        {/each}
+    </sequencer>
+    <fractal-tree>
+
+    </fractal-tree>
+</fractal-sequencer>
+
 
 <style>
 
-    #sequencer {
+    fractal-sequencer {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+    }
+
+    sequencer {
         display: grid;
         grid-template-columns: 140px 50px 140px;
     }
 
-    .sequencer-item {
+    sequencer-item {
         display: flex;
         flex-flow: column nowrap;
         align-items: center;
@@ -380,27 +395,28 @@
         position: relative;
     }
 
-    .sequencer-item.even .horizontal-line {
+    .line {
+        position: absolute;
+        border-radius: 50px;
+    }
+
+    sequencer-item.even .line.horizontal {
         left: 130px;
     }
 
-    .sequencer-item.odd .horizontal-line {
+    sequencer-item.odd .line.horizontal {
         right: 130px;
     }
 
-    .horizontal-line {
-        position: absolute;
-        border-bottom: 3px solid azure;
-        border-radius: 50px;
+    .line.horizontal {
         width: 15px;
+        border-bottom: 3px solid azure;
     }
 
-    .vertical-line {
-        position: absolute;
-        border-left: 3px solid azure;
-        border-radius: 50px;
+    .line.vertical {
         height: 40px;
         top: 60px;
+        border-left: 3px solid azure;
     }
 
 </style>

@@ -81,7 +81,7 @@
 <svelte:window on:mouseup|preventDefault={endDrag}/>
 
 {#if label}
-    <span id="title" class="label" in:fade out:fade>{label}</span>
+    <span class="label title" in:fade out:fade>{label}</span>
 {/if}
 
 {#if isTooltipEnabled}
@@ -121,7 +121,7 @@
         position: relative;
     }
 
-    #title {
+    .title {
         position: absolute;
         bottom: 100px;
     }
