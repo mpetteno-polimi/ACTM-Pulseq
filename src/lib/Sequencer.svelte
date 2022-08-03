@@ -25,7 +25,7 @@
 
     /* --------------------------------------------- COMPONENTS PROPS --------------------------------------------- */
 
-    const CONTROL_KNOBS_DEFAULTS = [
+    const SEQ_CONTROL_KNOBS_DEFAULTS = [
         {
             label: "length",
             minLengthValue: 1,
@@ -101,9 +101,41 @@
         }
     ]
     const NOTE_KNOBS_DEFAULTS = {
-        values: [""].concat(Utilities.getNotesForScale(CONTROL_KNOBS_DEFAULTS[2].initialValue)),
-        initialSequence: Utilities.generateMelody(CONTROL_KNOBS_DEFAULTS[2].initialValue, STEP_NUMBER),
+        values: [""].concat(Utilities.getNotesForScale(SEQ_CONTROL_KNOBS_DEFAULTS[2].initialValue)),
+        initialSequence: Utilities.generateMelody(SEQ_CONTROL_KNOBS_DEFAULTS[2].initialValue, STEP_NUMBER),
     }
+    const FRACTAL_KNOBS_DEFAULTS = [
+        {
+            label: "branches",
+            minBranchesValue: 0,
+            maxBranchesValue: 7,
+            initialValue: 0,
+            get values() {
+                return Utilities.getRange(this.minBranchesValue, this.maxBranchesValue);
+            },
+            valueChangedHandler: handleFractalBranchesChange
+        },
+        {
+            label: "path",
+            minPathValue: 1,
+            maxPathValue: 1,
+            initialValue: 1,
+            get values() {
+                return Utilities.getRange(this.minPathValue, this.maxPathValue);
+            },
+            valueChangedHandler: handleFractalPathChange
+        },
+        {
+            label: "mutation",
+            minMutationValue: 0,
+            maxMutationValue: 10,
+            initialValue: 0,
+            get values() {
+                return Utilities.getArray(this.maxMutationValue - this.minMutationValue + 1, (_, i) => i / 10);
+            },
+            valueChangedHandler: handleFractalMutationChange
+        }
+    ]
 
     function getKnobProps(id, label, values, initialValue) {
         let initialValueIndex = values.indexOf(initialValue);
@@ -122,19 +154,29 @@
         }
     }
 
-    /* ------ NOTE KNOBS PROPS ------ */
+    /* ------ SEQUENCER NOTE KNOBS PROPS ------ */
     let noteKnobsProps = Utilities.getArray(STEP_NUMBER, (_, index) => {
         let initialSequence = NOTE_KNOBS_DEFAULTS.initialSequence;
         let currentKnobInitialValue = NOTE_KNOBS_DEFAULTS.values[initialSequence[index]];
         return getKnobProps(index, "", NOTE_KNOBS_DEFAULTS.values, currentKnobInitialValue);
     });
 
-    /* ------ CONTROL KNOBS PROPS ------ */
-    let controlKnobsProps = Utilities.getArray(STEP_NUMBER, (_, index) => {
-        let currentKnobDefaults = CONTROL_KNOBS_DEFAULTS[index];
+    /* ------ SEQUENCER CONTROL KNOBS PROPS ------ */
+    let sequencerControlKnobsProps = Utilities.getArray(STEP_NUMBER, (_, index) => {
+        let currentKnobDefaults = SEQ_CONTROL_KNOBS_DEFAULTS[index];
         return getKnobProps(index, currentKnobDefaults.label, currentKnobDefaults.values,
             currentKnobDefaults.initialValue);
     });
+
+    /* ------ FRACTAL KNOBS PROPS ------ */
+    let fractalKnobsProps = Utilities.getArray(3, (_, index) => {
+        let currentKnobDefaults = FRACTAL_KNOBS_DEFAULTS[index];
+        return getKnobProps(index, currentKnobDefaults.label, currentKnobDefaults.values,
+            currentKnobDefaults.initialValue);
+    });
+
+    /* ------ FRACTAL CONTROL KNOBS PROPS ------ */
+    let fractalControlKnobsProps = [];
 
     /* ------ LEDs PROPS ------ */
     let ledsProps = Utilities.getArray(STEP_NUMBER, () => ({isBlinking: false, blinkDuration: MIN_BLINK_DURATION}));
@@ -154,32 +196,41 @@
         SEQUENCE_MODE: 0,
         GLOBAL_CONTROL_MODE: 1
     }
+
+    const KNOBS_TYPE = {
+        SEQUENCER_KNOBS: 0,
+        FRACTAL_KNOBS: 1
+    }
+
     const DEFAULT_MODE = MODES.SEQUENCE_MODE;
     let activeMode = DEFAULT_MODE;
-    let knobsMatrix = [noteKnobsProps, controlKnobsProps];
-    let activeKnobs = knobsMatrix[DEFAULT_MODE];
+    let sequencerKnobs = [noteKnobsProps, sequencerControlKnobsProps];
+    let fractalKnobs = [fractalKnobsProps, fractalControlKnobsProps];
+    let activeKnobs = [sequencerKnobs[DEFAULT_MODE], fractalKnobs[DEFAULT_MODE]];
 
-    function updateActiveKnobsProps(event) {
-        let targetKnobProps = activeKnobs[event.detail.knobId];
-        targetKnobProps.valueIndex = event.detail.index;
-        targetKnobProps.degree = event.detail.deg;
-        targetKnobProps.selectedValue = event.detail.value;
+    function updateActiveKnobsProps(event, knobsType) {
+        let targetKnobProps = activeKnobs[knobsType][event.detail.knobId];
+        if (targetKnobProps) {
+            targetKnobProps.valueIndex = event.detail.index;
+            targetKnobProps.degree = event.detail.deg;
+            targetKnobProps.selectedValue = event.detail.value;
+        }
     }
 
     /* --------------------------------------------- SEQUENCER STATE --------------------------------------------- */
 
     let sequence;
     let sequenceState = {
-        length: CONTROL_KNOBS_DEFAULTS[0].initialValue,
-        tempo: CONTROL_KNOBS_DEFAULTS[1].initialValue,
-        scale: CONTROL_KNOBS_DEFAULTS[2].initialValue,
-        order: CONTROL_KNOBS_DEFAULTS[3].initialValue,
-        transpose: CONTROL_KNOBS_DEFAULTS[4].initialValue,
-        timeDivision: CONTROL_KNOBS_DEFAULTS[5].initialValue,
-        repeat: CONTROL_KNOBS_DEFAULTS[6].initialValue,
-        slew: CONTROL_KNOBS_DEFAULTS[7].initialValue
+        length: SEQ_CONTROL_KNOBS_DEFAULTS[0].initialValue,
+        tempo: SEQ_CONTROL_KNOBS_DEFAULTS[1].initialValue,
+        scale: SEQ_CONTROL_KNOBS_DEFAULTS[2].initialValue,
+        order: SEQ_CONTROL_KNOBS_DEFAULTS[3].initialValue,
+        transpose: SEQ_CONTROL_KNOBS_DEFAULTS[4].initialValue,
+        timeDivision: SEQ_CONTROL_KNOBS_DEFAULTS[5].initialValue,
+        repeat: SEQ_CONTROL_KNOBS_DEFAULTS[6].initialValue,
+        slew: SEQ_CONTROL_KNOBS_DEFAULTS[7].initialValue
     };
-    let steps = Utilities.getArray(CONTROL_KNOBS_DEFAULTS[0].initialValue, (step, index) => (
+    let steps = Utilities.getArray(SEQ_CONTROL_KNOBS_DEFAULTS[0].initialValue, (step, index) => (
         {
             id: index,
             note: "",
@@ -242,6 +293,23 @@
         }
     }
 
+    /* ----------------------------------------------- FRACTAL -------------------------------------------------- */
+    let isFractalActive = false;
+
+    function handleFractalBranchesChange(newValue) {
+        fractalKnobsProps[1] = getKnobProps(1, "path", Utilities.getRange(1, 2**newValue), 1);
+        activeKnobs[KNOBS_TYPE.FRACTAL_KNOBS][1] = fractalKnobsProps[1];
+        isFractalActive = newValue > 0;
+    }
+
+    function handleFractalPathChange(newValue) {
+
+    }
+
+    function handleFractalMutationChange(newValue) {
+
+    }
+
     /* --------------------------------------------- EVENT HANDLERS --------------------------------------------- */
 
     function handleKeyDown(event) {
@@ -249,7 +317,7 @@
         switch (event.key) {
             case "Control":
                 activeMode = MODES.GLOBAL_CONTROL_MODE;
-                activeKnobs = knobsMatrix[MODES.GLOBAL_CONTROL_MODE];
+                activeKnobs = [sequencerKnobs[MODES.GLOBAL_CONTROL_MODE], fractalKnobs[MODES.GLOBAL_CONTROL_MODE]];
                 break;
             case "m":
                 if (activeMode === MODES.GLOBAL_CONTROL_MODE) {
@@ -263,7 +331,7 @@
         switch (event.key) {
             case "Control":
                 activeMode = MODES.SEQUENCE_MODE;
-                activeKnobs = knobsMatrix[MODES.SEQUENCE_MODE];
+                activeKnobs = [sequencerKnobs[MODES.SEQUENCE_MODE], fractalKnobs[MODES.SEQUENCE_MODE]];
                 break;
         }
     }
@@ -272,14 +340,25 @@
         stopSequence();
     }
 
-    function handleKnobValueChanged(event) {
-        updateActiveKnobsProps(event);
+    function handleSequencerKnobValueChanged(event) {
+        updateActiveKnobsProps(event, KNOBS_TYPE.SEQUENCER_KNOBS);
         switch (activeMode) {
             case MODES.SEQUENCE_MODE:
                 steps[event.detail.knobId].note = event.detail.value;
                 break;
             case MODES.GLOBAL_CONTROL_MODE:
-                CONTROL_KNOBS_DEFAULTS[event.detail.knobId].valueChangedHandler(event.detail.value);
+                SEQ_CONTROL_KNOBS_DEFAULTS[event.detail.knobId].valueChangedHandler(event.detail.value);
+                break;
+        }
+    }
+
+    function handleFractalKnobValueChanged(event) {
+        updateActiveKnobsProps(event, KNOBS_TYPE.FRACTAL_KNOBS);
+        switch (activeMode) {
+            case MODES.SEQUENCE_MODE:
+                FRACTAL_KNOBS_DEFAULTS[event.detail.knobId].valueChangedHandler(event.detail.value);
+                break;
+            case MODES.GLOBAL_CONTROL_MODE:
                 break;
         }
     }
@@ -340,10 +419,11 @@
 
 <fractal-sequencer in:fade>
     <sequencer>
-        {#each activeKnobs as activeKnob, i}
+        {#each activeKnobs[KNOBS_TYPE.SEQUENCER_KNOBS] as activeSequencerKnob, i}
             {#if i % 2 === 0}
                 <sequencer-item class="even">
-                    <Knob {...activeKnob} tooltipPosition="left" on:knobValueChanged={handleKnobValueChanged}/>
+                    <Knob {...activeSequencerKnob} tooltipPosition="left"
+                          on:knobValueChanged={handleSequencerKnobValueChanged}/>
                     <div class="line horizontal"></div>
                 </sequencer-item>
                 <sequencer-item class="even">
@@ -361,14 +441,27 @@
                 </sequencer-item>
                 <sequencer-item class="odd">
                     <div class="line horizontal"></div>
-                    <Knob {...activeKnob} tooltipPosition="right" on:knobValueChanged={handleKnobValueChanged}/>
+                    <Knob {...activeSequencerKnob} tooltipPosition="right"
+                          on:knobValueChanged={handleSequencerKnobValueChanged}/>
                 </sequencer-item>
             {/if}
         {/each}
     </sequencer>
-    <fractal-tree>
-
-    </fractal-tree>
+    <fractal>
+        {#each activeKnobs[KNOBS_TYPE.FRACTAL_KNOBS] as activeFractalKnob, i}
+            <fractal-item>
+                {#if i === 1}
+                    {#if isFractalActive}
+                        <Knob {...activeFractalKnob} tooltipPosition="right"
+                              on:knobValueChanged={handleFractalKnobValueChanged}/>
+                    {/if}
+                {:else}
+                    <Knob {...activeFractalKnob} tooltipPosition="right"
+                          on:knobValueChanged={handleFractalKnobValueChanged}/>
+                {/if}
+            </fractal-item>
+        {/each}
+    </fractal>
 </fractal-sequencer>
 
 
@@ -417,6 +510,21 @@
         height: 40px;
         top: 60px;
         border-left: 3px solid azure;
+    }
+
+    fractal {
+        margin: 0 100px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    fractal-item {
+        position: relative;
+        display: flex;
+        flex-flow: column nowrap;
+        align-items: center;
+        justify-content: center;
+        margin: 30px 0;
     }
 
 </style>

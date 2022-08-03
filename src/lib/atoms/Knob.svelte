@@ -92,7 +92,7 @@
     </div>
 {/if}
 
-<div class="knob" style="--size: {size + 20}px;">
+<div class="knob" style="--size: {size + 20}px;" in:fade out:fade>
     <div class="ticks" >
         {#each Array.from({length: (endAngle - startAngle) / (fullAngle / numTicks) + 1}, (_, i) => startAngle +
             (i * (fullAngle / numTicks))) as tickDegree, index}
