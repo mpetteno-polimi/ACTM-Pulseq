@@ -12,7 +12,7 @@ export {
  * Returns a random number between min (inclusive) and max (exclusive)
  */
 function getRandom(min, max) {
-    return Math.random() * (max - min + 1) + min;
+    return (Math.random() * (max - min)) + min;
 }
 
 /**
@@ -104,8 +104,10 @@ function getNotesForScale(scaleName, startNote = "A", startOctave = 3) {
 }
 
 function generateMelody(scaleName, length) {
-    let scaleNotes = getNotesForScale(scaleName);
-    return getArray(length, () => (getRandomInt(0, scaleNotes.length - 1)));
+    return getArray(length, () => {
+        let scaleNotes = getNotesForScale(scaleName);
+        return scaleNotes[getRandomInt(0, scaleNotes.length - 1)];
+    });
 }
 
 function toggleMasterMute() {

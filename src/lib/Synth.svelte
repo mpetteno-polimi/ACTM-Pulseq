@@ -2,9 +2,7 @@
     import {synthStore} from '../stores.js';
     import * as Tone from "tone";
 
-    function init() {
-        synthStore.set(new Tone.FMSynth().toDestination());
-    }
-
-    init();
+    synthStore.set({
+        fmSynth: new Tone.FMSynth().toDestination()
+    });
 </script>

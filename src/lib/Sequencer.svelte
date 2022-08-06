@@ -1,5 +1,6 @@
 <script>
     import {synthStore} from '../stores.js';
+    import {config} from "../config.js";
     import {onMount} from "svelte";
     import {fade} from 'svelte/transition';
     import * as Utilities from "../utilities.js";
@@ -9,133 +10,13 @@
 
     /* --------------------------------------------- GLOBAL VARIABLES --------------------------------------------- */
 
-    const STEP_NUMBER = 8;
-    const VELOCITY_MIN = 0.5;
-    const KNOBS_START_ANGLE = 45;
-    const KNOBS_END_ANGLE = 315;
-    const MIN_BLINK_DURATION = 0.2;
-    const DEFAULT_STEP_DURATION = 1;
-    const STEP_DURATION_OFFSET = 0.1;
-
     /* -- Get synth object from stores -- */
-    let synth;
+    let synths;
     synthStore.subscribe(value => {
-        synth = value;
+        synths = value;
     });
 
     /* --------------------------------------------- COMPONENTS PROPS --------------------------------------------- */
-
-    const SEQ_CONTROL_KNOBS_DEFAULTS = [
-        {
-            label: "length",
-            minLengthValue: 1,
-            maxLengthValue: STEP_NUMBER,
-            initialValue: 8,
-            get values() {
-                return Utilities.getRange(this.minLengthValue, this.maxLengthValue);
-            },
-            valueChangedHandler: handleSequenceLengthChange
-        },
-        {
-            label: "tempo",
-            minBpmValue: 30,
-            maxBpmValue: 240,
-            initialValue: 120,
-            get values() {
-                return Utilities.getRange(this.minBpmValue, this.maxBpmValue);
-            },
-            valueChangedHandler: handleSequenceTempoChange
-        },
-        {
-            label: "scale",
-            initialValue: "major",
-            values: ["chromatic", "major", "minor", "major pentatonic", "minor pentatonic", "harmonic minor",
-                "whole tone", "random"],
-            valueChangedHandler: handleSequenceScaleChange
-        },
-        {
-            label: "order",
-            initialValue: "forward",
-            values: ["forward", "backward", "pendulum", "random"],
-            valueChangedHandler: handleSequenceOrderChange
-        },
-        {
-            label: "transpose",
-            minTrasposeValue: -24,
-            maxTrasposeValue: 24,
-            initialValue: 0,
-            get values() {
-                return Utilities.getRange(this.minTrasposeValue, this.maxTrasposeValue);
-            },
-            valueChangedHandler: handleSequenceTransposeChange
-        },
-        {
-            label: "div/mult",
-            minTimeDivisionValue: 0,
-            maxTimeDivisionValue: 8,
-            initialValue: 8,
-            get values() {
-                return Utilities.getArray(this.maxTimeDivisionValue - this.minTimeDivisionValue + 1, (_, i) => 2 ** i);
-            },
-            valueChangedHandler: handleSequenceTimeDivisionChange
-        },
-        {
-            label: "repeat",
-            minRepeatValue: 1,
-            maxRepeatValue: 8,
-            initialValue: 1,
-            get values() {
-                return Utilities.getRange(this.minRepeatValue, this.maxRepeatValue);
-            },
-            valueChangedHandler: handleSequenceRepeatChange
-        },
-        {
-            label: "slew",
-            minSlewValue: 0,
-            maxSlewValue: 10,
-            initialValue: 0,
-            get values() {
-                return Utilities.getArray(this.maxSlewValue - this.minSlewValue + 1, (_, i) => i / 10);
-            },
-            valueChangedHandler: handleSequenceSlewChange
-        }
-    ]
-    const NOTE_KNOBS_DEFAULTS = {
-        values: [""].concat(Utilities.getNotesForScale(SEQ_CONTROL_KNOBS_DEFAULTS[2].initialValue)),
-        initialSequence: Utilities.generateMelody(SEQ_CONTROL_KNOBS_DEFAULTS[2].initialValue, STEP_NUMBER),
-    }
-    const FRACTAL_KNOBS_DEFAULTS = [
-        {
-            label: "branches",
-            minBranchesValue: 0,
-            maxBranchesValue: 7,
-            initialValue: 0,
-            get values() {
-                return Utilities.getRange(this.minBranchesValue, this.maxBranchesValue);
-            },
-            valueChangedHandler: handleFractalBranchesChange
-        },
-        {
-            label: "path",
-            minPathValue: 1,
-            maxPathValue: 1,
-            initialValue: 1,
-            get values() {
-                return Utilities.getRange(this.minPathValue, this.maxPathValue);
-            },
-            valueChangedHandler: handleFractalPathChange
-        },
-        {
-            label: "mutation",
-            minMutationValue: 0,
-            maxMutationValue: 10,
-            initialValue: 0,
-            get values() {
-                return Utilities.getArray(this.maxMutationValue - this.minMutationValue + 1, (_, i) => i / 10);
-            },
-            valueChangedHandler: handleFractalMutationChange
-        }
-    ]
 
     function getKnobProps(id, label, values, initialValue) {
         let initialValueIndex = values.indexOf(initialValue);
@@ -149,37 +30,39 @@
             minValueIndex: minValueIndex,
             maxValueIndex: maxValueIndex,
             values: values,
-            degree: Utilities.convertRange(minValueIndex, maxValueIndex, KNOBS_START_ANGLE, KNOBS_END_ANGLE,
-                initialValueIndex)
+            degree: Utilities.convertRange(minValueIndex, maxValueIndex, config.ui.knobs.startAngle,
+                config.ui.knobs.endAngle, initialValueIndex)
         }
     }
 
     /* ------ SEQUENCER NOTE KNOBS PROPS ------ */
-    let noteKnobsProps = Utilities.getArray(STEP_NUMBER, (_, index) => {
-        let initialSequence = NOTE_KNOBS_DEFAULTS.initialSequence;
-        let currentKnobInitialValue = NOTE_KNOBS_DEFAULTS.values[initialSequence[index]];
-        return getKnobProps(index, "", NOTE_KNOBS_DEFAULTS.values, currentKnobInitialValue);
+    let noteKnobsProps = Utilities.getArray(config.sequence.stepNumber, (_, index) => {
+        let initialSequence = config.sequence.steps;
+        let initialScaleNotes = [""].concat(Utilities.getNotesForScale(config.sequence.controls.scale.init));
+        let currentKnobInitialValue = initialSequence[index].note;
+        return getKnobProps(index, "", initialScaleNotes, currentKnobInitialValue);
     });
 
     /* ------ SEQUENCER CONTROL KNOBS PROPS ------ */
-    let sequencerControlKnobsProps = Utilities.getArray(STEP_NUMBER, (_, index) => {
-        let currentKnobDefaults = SEQ_CONTROL_KNOBS_DEFAULTS[index];
-        return getKnobProps(index, currentKnobDefaults.label, currentKnobDefaults.values,
-            currentKnobDefaults.initialValue);
+    let sequencerControlKnobsProps = Object.keys(config.sequence.controls).map((controlKey, index) => {
+        let currentKnobDefaults = config.sequence.controls[controlKey];
+        return getKnobProps(index, currentKnobDefaults.label, currentKnobDefaults.values, currentKnobDefaults.init);
     });
 
     /* ------ FRACTAL KNOBS PROPS ------ */
-    let fractalKnobsProps = Utilities.getArray(3, (_, index) => {
-        let currentKnobDefaults = FRACTAL_KNOBS_DEFAULTS[index];
-        return getKnobProps(index, currentKnobDefaults.label, currentKnobDefaults.values,
-            currentKnobDefaults.initialValue);
+    let fractalKnobsProps = Object.keys(config.tree.controls).map((controlKey, index) => {
+        let currentKnobDefaults = config.tree.controls[controlKey];
+        return getKnobProps(index, currentKnobDefaults.label, currentKnobDefaults.values, currentKnobDefaults.init);
     });
 
     /* ------ FRACTAL CONTROL KNOBS PROPS ------ */
     let fractalControlKnobsProps = [];
 
     /* ------ LEDs PROPS ------ */
-    let ledsProps = Utilities.getArray(STEP_NUMBER, () => ({isBlinking: false, blinkDuration: MIN_BLINK_DURATION}));
+    let ledsProps = Utilities.getArray(config.sequence.stepNumber, () => ({
+        isBlinking: false,
+        blinkDuration: config.ui.leds.minBlinkDuration
+    }));
 
     function blinkLed(index, duration, time) {
         Tone.Draw.schedule(() => {
@@ -187,7 +70,7 @@
         }, time);
         Tone.Draw.schedule(() => {
             ledsProps[index].isBlinking = false;
-        }, time + (duration < MIN_BLINK_DURATION ? MIN_BLINK_DURATION : duration));
+        }, time + (duration < config.ui.leds.minBlinkDuration ? config.ui.leds.minBlinkDuration : duration));
     }
 
     /* --------------------------------------------- SEQUENCER MODES --------------------------------------------- */
@@ -217,100 +100,240 @@
         }
     }
 
-    /* --------------------------------------------- SEQUENCER STATE --------------------------------------------- */
+    /* ---------------------------------------------- SEQUENCE ------------------------------------------------- */
 
-    let sequence;
-    let sequenceState = {
-        length: SEQ_CONTROL_KNOBS_DEFAULTS[0].initialValue,
-        tempo: SEQ_CONTROL_KNOBS_DEFAULTS[1].initialValue,
-        scale: SEQ_CONTROL_KNOBS_DEFAULTS[2].initialValue,
-        order: SEQ_CONTROL_KNOBS_DEFAULTS[3].initialValue,
-        transpose: SEQ_CONTROL_KNOBS_DEFAULTS[4].initialValue,
-        timeDivision: SEQ_CONTROL_KNOBS_DEFAULTS[5].initialValue,
-        repeat: SEQ_CONTROL_KNOBS_DEFAULTS[6].initialValue,
-        slew: SEQ_CONTROL_KNOBS_DEFAULTS[7].initialValue
+    const SEQUENCE_TRANSFORMATION_TYPE = {
+        TRANSPOSITION: "transposition",
+        INVERSION: "inversion",
+        REVERSAL: "reversal",
+        MUTATION: "mutation",
+
+        get random() {
+            let rand = Utilities.getRandomInt(0, Object.keys(this).length - 1);
+            return this[Object.keys(this)[rand]];
+        }
     };
-    let steps = Utilities.getArray(SEQ_CONTROL_KNOBS_DEFAULTS[0].initialValue, (step, index) => (
-        {
-            id: index,
-            note: "",
-            duration: DEFAULT_STEP_DURATION
+
+    class SequenceStep {
+
+        constructor(id, note = "", duration = config.sequence.defaultStepDuration,
+                    velocity = Utilities.getRandom(config.sequence.minStepVelocity, 1), transpose = 0, slew = 0,
+                    synth = synths[config.sequence.synth]) {
+            this.id = id;
+            this.note = note;
+            this.duration = duration;
+            this.velocity = velocity;
+            this.transpose = transpose;
+            this.slew = slew;
+            this.synth = synth;
         }
-    ));
 
-    function startSequence() {
-        sequence.start(0);
-        Tone.Transport.bpm.value = sequenceState.tempo;
-        Tone.Transport.start();
     }
 
-    function updateSequence() {
-        sequence.events = getStepsForCurrentState();
-    }
+    class Sequence {
 
-    function stopSequence() {
-        sequence.stop();
-        Tone.Transport.stop();
-    }
-
-    function onSequenceStep(time, step) {
-        let note = Utilities.transposeNoteBySemitones(step.note, sequenceState.transpose);
-        let duration = sequence.subdivision - (sequence.subdivision > STEP_DURATION_OFFSET ? STEP_DURATION_OFFSET : 0);
-        let velocity = Utilities.getRandom(VELOCITY_MIN, 1);
-        synth.portamento = duration * sequenceState.slew;
-        synth.triggerAttackRelease(note, duration, time, velocity);
-        blinkLed(step.id, duration, time);
-    }
-
-    function getStepsForCurrentState() {
-        let newSteps = [...steps].slice(0, sequenceState.length);
-        switch (sequenceState.order) {
-            case "forward":
-                break;
-            case "backward":
-                newSteps.reverse();
-                break;
-            case "pendulum":
-                let pendulumSteps = [...newSteps].slice(1, sequenceState.length - 1).reverse();
-                newSteps = newSteps.concat(pendulumSteps);
-                break;
-            case "random":
-                Utilities.shuffleArray(newSteps);
-                break;
+        constructor(steps, state, synth) {
+            this.state = state;
+            this.steps = steps;
+            this.synth = synth;
+            let timeDivision = Utilities.getSequenceSubdivisionForTimeDivision(state.timeDivision);
+            this.sequence = new Tone.Sequence(this.onSequenceStep, this.steps, timeDivision);
         }
-        return Utilities.repeatElements(newSteps, sequenceState.repeat);
-    }
 
-    function updateNoteKnobsAndSequenceSteps(newScaleNotes) {
-        for (let i = 0; i < STEP_NUMBER; i++) {
-            let oldNoteIndex = noteKnobsProps[i].valueIndex;
-            let oldNoteMaxIndex = noteKnobsProps[i].maxValueIndex;
-            let newNoteValues = [""].concat(newScaleNotes);
-            let newNoteIndex = Utilities.convertRange(0, oldNoteMaxIndex, 0, newScaleNotes.length, oldNoteIndex);
-            let newStepNote = newNoteValues[newNoteIndex];
-            noteKnobsProps[i] = getKnobProps(i, "", newNoteValues, newStepNote);
-            steps[i].note = newStepNote;
+        onSequenceStep(time, step) {
+            let note = Utilities.transposeNoteBySemitones(step.note, step.transpose);
+            let duration = this.subdivision - (this.subdivision > config.sequence.stepDurationOffset
+                ? config.sequence.stepDurationOffset : 0);
+            let velocity = step.velocity;
+            step.synth.portamento = duration * step.slew;
+            step.synth.triggerAttackRelease(note, duration, time, velocity);
+            blinkLed(step.id, duration, time);
         }
+
+        start() {
+            Tone.Transport.bpm.value = this.state.tempo;
+            this.sequence.start();
+        }
+
+        stop() {
+            this.sequence.stop();
+        }
+
+        merge(sequenceToMerge) {
+            let mergedSteps = this.steps.concat(sequenceToMerge.steps);
+            return new Sequence(mergedSteps, this.state, this.synth);
+        }
+
+        update() {
+            this.sequence.events = this.getStepsForCurrentState();
+        }
+
+        transform(transformationType = SEQUENCE_TRANSFORMATION_TYPE.random) {
+            switch (transformationType) {
+                case SEQUENCE_TRANSFORMATION_TYPE.TRANSPOSITION:
+                    return this.transpose();
+                case SEQUENCE_TRANSFORMATION_TYPE.INVERSION:
+                    return this.invert();
+                case SEQUENCE_TRANSFORMATION_TYPE.REVERSAL:
+                    return this.revert();
+                case SEQUENCE_TRANSFORMATION_TYPE.MUTATION:
+                    return this.mutate();
+            }
+        }
+
+        // TODO - sequence transpose
+        transpose() {
+            let newSteps = this.steps.map((step) => {
+                return {
+                    ...step,
+                    note: Utilities.transposeNoteBySemitones(step.note, 12)
+                }
+            })
+            return new Sequence(newSteps, this.state, this.synth);
+        }
+
+        // TODO - sequence invert
+        invert() {
+            return this.transpose();
+        }
+
+        // TODO - sequence revert
+        revert() {
+            return this.transpose();
+        }
+
+        // TODO - sequence mutate
+        mutate() {
+            return this.transpose();
+        }
+
+        getStepsForCurrentState() {
+            let newSteps = [...this.steps].slice(0, this.state.length);
+            switch (this.state.order) {
+                case "forward":
+                    break;
+                case "backward":
+                    newSteps.reverse();
+                    break;
+                case "pendulum":
+                    let pendulumSteps = [...newSteps].slice(1, this.state.length - 1).reverse();
+                    newSteps = newSteps.concat(pendulumSteps);
+                    break;
+                case "random":
+                    Utilities.shuffleArray(newSteps);
+                    break;
+            }
+            return Utilities.repeatElements(newSteps, this.state.repeat);
+        }
+
+        changeTimeSubdivision(newValue) {
+            let newSubdivision = Utilities.getSequenceSubdivisionForTimeDivision(newValue);
+            this.sequence.stop();
+            this.sequence = new Tone.Sequence(this.onSequenceStep, this.getStepsForCurrentState(), newSubdivision);
+            this.sequence.start();
+        }
+
     }
 
     /* ----------------------------------------------- FRACTAL -------------------------------------------------- */
+
+    class SequenceTreeNode {
+        constructor(value, parent = null) {
+            this.value = value;
+            this.parent = parent;
+            this.left = null;
+            this.right = null;
+        }
+    }
+
+    class SequenceTree {
+
+        constructor() {
+            this.height = config.tree.controls.branches.init;
+            this.paths = [];
+            this.playingPath = -1;
+            this.generateTree();
+        }
+
+        get trunkSequence() {
+            return this.root.value;
+        }
+
+        generateTrunkSequence(sequenceConfig) {
+            let steps = sequenceConfig.steps.map((step, index) => {
+                return new SequenceStep(index, step.note, step.duration);
+            });
+            let state = {
+                length: sequenceConfig.controls.length.init,
+                tempo: sequenceConfig.controls.tempo.init,
+                scale: sequenceConfig.controls.scale.init,
+                order: sequenceConfig.controls.order.init,
+                transpose: sequenceConfig.controls.transpose.init,
+                timeDivision: sequenceConfig.controls.timeDivision.init,
+                repeat: sequenceConfig.controls.repeat.init,
+                slew: sequenceConfig.controls.slew.init
+            }
+            return new Sequence(steps, state);
+        }
+
+        generateTree() {
+            let trunkSequence = this.generateTrunkSequence(config.sequence);
+            this.root = new SequenceTreeNode(trunkSequence);
+            this.root.left = this.generateLevels(this.height, trunkSequence, trunkSequence);
+            this.root.right = this.generateLevels(this.height, trunkSequence, trunkSequence);
+        }
+
+        generateLevels(levelIndex, levelSequence, pathSequence) {
+            if (levelIndex <= 0) {
+                this.paths.push(pathSequence);
+                return null;
+            }
+            let transformedSequence = levelSequence.transform();
+            let node = new SequenceTreeNode(transformedSequence);
+            let mergedSequence = levelSequence.merge(transformedSequence);
+            node.left = this.generateLevels(levelIndex - 1, transformedSequence, mergedSequence);
+            node.right = this.generateLevels(levelIndex - 1, transformedSequence, mergedSequence);
+            return node;
+        }
+
+        play(pathIndex = 1) {
+            console.assert(pathIndex > 0 && pathIndex <= this.paths.length, "Path index is not valid");
+            this.paths[pathIndex - 1].start();
+            this.playingPath = pathIndex - 1;
+        }
+
+        stop() {
+            if (this.playingPath >= 0) {
+                this.paths[this.playingPath].stop();
+                this.playingPath = -1;
+            }
+        }
+
+    }
+
+    /* --------------------------------------------- SEQUENCER STATE --------------------------------------------- */
+
+    let fractalTree = new SequenceTree();
     let isFractalActive = false;
 
-    function handleFractalBranchesChange(newValue) {
-        fractalKnobsProps[1] = getKnobProps(1, "path", Utilities.getRange(1, 2**newValue), 1);
-        activeKnobs[KNOBS_TYPE.FRACTAL_KNOBS][1] = fractalKnobsProps[1];
-        isFractalActive = newValue > 0;
-    }
-
-    function handleFractalPathChange(newValue) {
-
-    }
-
-    function handleFractalMutationChange(newValue) {
-
-    }
-
     /* --------------------------------------------- EVENT HANDLERS --------------------------------------------- */
+
+    const sequencerControlChangeHandlers = [
+        handleSequenceLengthChange,
+        handleSequenceTempoChange,
+        handleSequenceScaleChange,
+        handleSequenceOrderChange,
+        handleSequenceTransposeChange,
+        handleSequenceTimeDivisionChange,
+        handleSequenceRepeatChange,
+        handleSequenceSlewChange
+    ]
+
+    const fractalControlChangeHandlers = [
+        handleFractalBranchesChange,
+        handleFractalPathChange,
+        handleFractalMutationChange
+    ]
 
     function handleKeyDown(event) {
         if (event.repeat) return;
@@ -336,27 +359,29 @@
         }
     }
 
-    function handleBeforeUnload(event) {
-        stopSequence();
+    function handleBeforeUnload() {
+        fractalTree.stop();
+        Tone.Transport.stop();
     }
 
     function handleSequencerKnobValueChanged(event) {
         updateActiveKnobsProps(event, KNOBS_TYPE.SEQUENCER_KNOBS);
         switch (activeMode) {
             case MODES.SEQUENCE_MODE:
-                steps[event.detail.knobId].note = event.detail.value;
+                fractalTree.trunkSequence.steps[event.detail.knobId].note = event.detail.value;
                 break;
             case MODES.GLOBAL_CONTROL_MODE:
-                SEQ_CONTROL_KNOBS_DEFAULTS[event.detail.knobId].valueChangedHandler(event.detail.value);
+                sequencerControlChangeHandlers[event.detail.knobId](event.detail.value);
                 break;
         }
+        //if (!event.detail.isOnMount) fractalTree.generateTree();
     }
 
     function handleFractalKnobValueChanged(event) {
         updateActiveKnobsProps(event, KNOBS_TYPE.FRACTAL_KNOBS);
         switch (activeMode) {
             case MODES.SEQUENCE_MODE:
-                FRACTAL_KNOBS_DEFAULTS[event.detail.knobId].valueChangedHandler(event.detail.value);
+                fractalControlChangeHandlers[event.detail.knobId](event.detail.value);
                 break;
             case MODES.GLOBAL_CONTROL_MODE:
                 break;
@@ -364,51 +389,75 @@
     }
 
     function handleSequenceLengthChange(newValue) {
-        sequenceState.length = newValue;
-        updateSequence();
+        fractalTree.trunkSequence.state.length = newValue;
+        fractalTree.trunkSequence.update();
     }
 
     function handleSequenceTempoChange(newValue) {
-        sequenceState.tempo = newValue;
+        fractalTree.trunkSequence.state.tempo = newValue;
         Tone.Transport.bpm.value = newValue;
     }
 
     function handleSequenceScaleChange(newValue) {
-        sequenceState.scale = newValue;
+        fractalTree.trunkSequence.state.scale = newValue;
         let newScaleNotes = Utilities.getNotesForScale(newValue);
-        updateNoteKnobsAndSequenceSteps(newScaleNotes);
+        for (let i = 0; i < fractalTree.trunkSequence.state.length; i++) {
+            let oldNoteIndex = noteKnobsProps[i].valueIndex;
+            let oldNoteMaxIndex = noteKnobsProps[i].maxValueIndex;
+            let newNoteValues = [""].concat(newScaleNotes);
+            let newNoteIndex = Utilities.convertRange(0, oldNoteMaxIndex, 0, newScaleNotes.length, oldNoteIndex);
+            let newStepNote = newNoteValues[newNoteIndex];
+            noteKnobsProps[i] = getKnobProps(i, "", newNoteValues, newStepNote);
+            fractalTree.trunkSequence.steps[i].note = newStepNote;
+        }
     }
 
     function handleSequenceOrderChange(newValue) {
-        sequenceState.order = newValue;
-        updateSequence();
+        fractalTree.trunkSequence.state.order = newValue;
+        fractalTree.trunkSequence.update();
     }
 
     function handleSequenceTransposeChange(newValue) {
-        sequenceState.transpose = newValue;
+        fractalTree.trunkSequence.state.transpose = newValue;
+        fractalTree.trunkSequence.steps.forEach((step) => {
+            step.transpose = newValue;
+        })
     }
 
     function handleSequenceTimeDivisionChange(newValue) {
-        sequenceState.timeDivision = newValue;
-        let newSubdivision = Utilities.getSequenceSubdivisionForTimeDivision(newValue);
-        sequence.stop();
-        sequence = new Tone.Sequence(onSequenceStep, getStepsForCurrentState(), newSubdivision);
-        sequence.start();
+        fractalTree.trunkSequence.state.timeDivision = newValue;
+        fractalTree.trunkSequence.changeTimeSubdivision(newValue);
     }
 
     function handleSequenceRepeatChange(newValue) {
-        sequenceState.repeat = newValue;
-        updateSequence();
+        fractalTree.trunkSequence.state.repeat = newValue;
+        fractalTree.trunkSequence.update();
     }
 
     function handleSequenceSlewChange(newValue) {
-        sequenceState.slew = newValue;
+        fractalTree.trunkSequence.state.slew = newValue;
+        fractalTree.trunkSequence.steps.forEach((step) => {
+            step.slew = newValue;
+        })
+    }
+
+    function handleFractalBranchesChange(newValue) {
+        fractalKnobsProps[1] = getKnobProps(1, "path", Utilities.getRange(1, 2 ** newValue), 1);
+        activeKnobs[KNOBS_TYPE.FRACTAL_KNOBS][1] = fractalKnobsProps[1];
+        isFractalActive = newValue > 0;
+    }
+
+    function handleFractalPathChange(newValue) {
+
+    }
+
+    function handleFractalMutationChange(newValue) {
+
     }
 
     onMount(() => {
-        let initialTimeDivision = Utilities.getSequenceSubdivisionForTimeDivision(sequenceState.timeDivision);
-        sequence = new Tone.Sequence(onSequenceStep, steps, initialTimeDivision);
-        startSequence();
+        Tone.Transport.start();
+        fractalTree.play();
     });
 
 </script>
@@ -434,7 +483,7 @@
             {:else}
                 <sequencer-item class="odd"></sequencer-item>
                 <sequencer-item class="odd">
-                    {#if i !== STEP_NUMBER - 1}
+                    {#if i !== config.sequence.stepNumber - 1}
                         <div class="line vertical"></div>
                     {/if}
                     <Led bind:isBlinking={ledsProps[i].isBlinking}/>
