@@ -7,7 +7,7 @@ export const config = {
                 label: "branches",
                 min: 0,
                 max: 7,
-                init: 0,
+                init: 1,
                 get values() {
                     return Utilities.getRange(this.min, this.max);
                 }
@@ -109,14 +109,12 @@ export const config = {
                 }
             }
         },
-        get steps() {
-            return Utilities.generateMelody(this.controls.scale.init, this.controls.length.init).map((note) => {
-               return {
-                   note: note,
-                   duration: 1
-               };
-            });
-        },
+        steps: Utilities.generateMelody("major", 8).map((note) => {
+            return {
+                note: note,
+                duration: 1
+            };
+        }),
         synth: "fmSynth",
         stepDurationOffset: 0.1,
         defaultStepDuration: 1,

@@ -3,6 +3,7 @@
     import {config} from "../config.js";
     import {onMount} from "svelte";
     import {fade} from 'svelte/transition';
+    import * as Tonal from "@tonaljs/tonal";
     import * as Utilities from "../utilities.js";
     import * as Tone from "tone";
     import Knob from "./atoms/Knob.svelte";
@@ -128,14 +129,35 @@
             this.synth = synth;
         }
 
+        static compareById(step1, step2) {
+            return step1.id - step2.id;
+        }
+
+        static compareByNote(step1, step2) {
+            let tonalNote1 = Tonal.Note.get(step1.note);
+            let tonalNote2 = Tonal.Note.get(step2.note);
+            return Tonal.Note.ascending(tonalNote1, tonalNote2);
+        }
+
+        static swapIds(step1, step2) {
+            let temp = step1.id;
+            step1.id = step2.id;
+            step2.id = temp;
+        }
+
+        static swapOctaves(step1, step2) {
+            let swapOctaveNotes = Utilities.swapOctave(step1.note, step2.note);
+            step1.note = swapOctaveNotes[0];
+            step2.note = swapOctaveNotes[1];
+        }
+
     }
 
     class Sequence {
 
-        constructor(steps, state, synth) {
+        constructor(steps, state) {
             this.state = state;
             this.steps = steps;
-            this.synth = synth;
             let timeDivision = Utilities.getSequenceSubdivisionForTimeDivision(state.timeDivision);
             this.sequence = new Tone.Sequence(this.onSequenceStep, this.steps, timeDivision);
         }
@@ -160,15 +182,17 @@
         }
 
         merge(sequenceToMerge) {
-            let mergedSteps = this.steps.concat(sequenceToMerge.steps);
-            return new Sequence(mergedSteps, this.state, this.synth);
+            let mergedSteps = [...this.steps].concat(sequenceToMerge.steps);
+            return new Sequence(mergedSteps, this.state);
         }
 
         update() {
+            Tone.Transport.bpm.value = this.state.tempo;
             this.sequence.events = this.getStepsForCurrentState();
         }
 
-        transform(transformationType = SEQUENCE_TRANSFORMATION_TYPE.random) {
+        transform(transformationType = SEQUENCE_TRANSFORMATION_TYPE.INVERSION) {
+            console.log(transformationType)
             switch (transformationType) {
                 case SEQUENCE_TRANSFORMATION_TYPE.TRANSPOSITION:
                     return this.transpose();
@@ -181,30 +205,66 @@
             }
         }
 
-        // TODO - sequence transpose
-        transpose() {
-            let newSteps = this.steps.map((step) => {
-                return {
-                    ...step,
-                    note: Utilities.transposeNoteBySemitones(step.note, 12)
-                }
-            })
-            return new Sequence(newSteps, this.state, this.synth);
+        transpose(semitones = Utilities.randomChoice(-12, 12)) {
+            let transposedSteps = Utilities.cloneArray(this.steps);
+            transposedSteps.forEach((transposedStep) => {
+                transposedStep.note = Utilities.transposeNoteBySemitones(transposedStep.note, semitones);
+            });
+            return new Sequence(transposedSteps, this.state);
         }
 
-        // TODO - sequence invert
         invert() {
-            return this.transpose();
+            let sortedSteps = Utilities.cloneArray(this.steps).sort(SequenceStep.compareByNote);
+            let invertedStep = this.invertInternal(sortedSteps).sort(SequenceStep.compareById);
+            return new Sequence(invertedStep, this.state);
         }
 
-        // TODO - sequence revert
+        invertInternal(orderedSteps) {
+            if (orderedSteps.length === 1) return orderedSteps[0];
+            if (orderedSteps.length === 2) {
+                SequenceStep.swapOctaves(orderedSteps[0], orderedSteps[1]);
+                SequenceStep.swapIds(orderedSteps[0], orderedSteps[1]);
+                return orderedSteps;
+            }
+            let middleSteps = this.invertInternal(orderedSteps.slice(1, orderedSteps.length - 1));
+            SequenceStep.swapOctaves(orderedSteps[0], orderedSteps[orderedSteps.length - 1]);
+            SequenceStep.swapIds(orderedSteps[0], orderedSteps[orderedSteps.length - 1]);
+            // Compare first elements
+            if (Utilities.compareNotes(orderedSteps[0].note, middleSteps[0].note)) {
+                orderedSteps[0].note = Utilities.lowerNote(orderedSteps[0].note, middleSteps[0].note);
+                middleSteps.unshift(orderedSteps[0]);
+            } else {
+                let temp = middleSteps[0];
+                middleSteps[0] = orderedSteps[0];
+                middleSteps.unshift(temp);
+            }
+            // Compare last elements
+            if (!Utilities.compareNotes(orderedSteps[orderedSteps.length - 1].note, middleSteps[middleSteps.length - 1].note)) {
+                orderedSteps[orderedSteps.length - 1].note = Utilities.raiseNote(orderedSteps[orderedSteps.length - 1].note, middleSteps[middleSteps.length - 1].note);
+                middleSteps.push(orderedSteps[orderedSteps.length - 1]);
+            } else {
+                let temp = middleSteps[middleSteps.length - 1];
+                middleSteps[middleSteps.length - 1] = orderedSteps[orderedSteps.length - 1];
+                middleSteps.push(temp);
+            }
+            return middleSteps;
+        }
+
         revert() {
-            return this.transpose();
+            let revertedSteps = Utilities.cloneArray(this.steps).reverse();
+            revertedSteps.forEach((revertedStep, index) => {
+                revertedStep.id = index;
+            });
+            return new Sequence(revertedSteps, this.state);
         }
 
-        // TODO - sequence mutate
         mutate() {
-            return this.transpose();
+            let mutatedSteps = Utilities.cloneArray(this.steps);
+            let stepsToMutate = Utilities.getRandomSubarray(mutatedSteps);
+            stepsToMutate.forEach((step) => {
+                mutatedSteps[step.id].note = Utilities.transposeNoteBySemitones(step.note);
+            })
+            return new Sequence(mutatedSteps, this.state);
         }
 
         getStepsForCurrentState() {
@@ -220,17 +280,32 @@
                     newSteps = newSteps.concat(pendulumSteps);
                     break;
                 case "random":
-                    Utilities.shuffleArray(newSteps);
+                    newSteps = Utilities.shuffleArray(newSteps);
                     break;
             }
+            this.steps.forEach((step) => {
+                step.transpose = this.state.transpose;
+                step.slew = this.state.slew;
+            });
             return Utilities.repeatElements(newSteps, this.state.repeat);
         }
 
-        changeTimeSubdivision(newValue) {
-            let newSubdivision = Utilities.getSequenceSubdivisionForTimeDivision(newValue);
+        changeTimeSubdivision(newTimeSubdivision) {
+            let newSubdivision = Utilities.getSequenceSubdivisionForTimeDivision(newTimeSubdivision);
             this.sequence.stop();
             this.sequence = new Tone.Sequence(this.onSequenceStep, this.getStepsForCurrentState(), newSubdivision);
             this.sequence.start();
+        }
+
+        changeScale(newScale) {
+            let oldScaleNotes = Utilities.getNotesForScale(this.state.scale);
+            let newScaleNotes = Utilities.getNotesForScale(newScale);
+            this.steps.forEach((step) => {
+                let oldNoteIndex = oldScaleNotes.indexOf(step.note) + 1;
+                let oldNoteMaxIndex = oldScaleNotes.length;
+                let newNoteIndex = Utilities.convertRange(0, oldNoteMaxIndex, 0, newScaleNotes.length, oldNoteIndex);
+                step.note = newScaleNotes[newNoteIndex];
+            });
         }
 
     }
@@ -248,11 +323,13 @@
 
     class SequenceTree {
 
-        constructor() {
+        constructor(trunkSequence = this.generateTrunkSequence(config.sequence)) {
             this.height = config.tree.controls.branches.init;
+            this.root = new SequenceTreeNode(trunkSequence);
             this.paths = [];
             this.playingPath = -1;
             this.generateTree();
+            console.log(this.paths)
         }
 
         get trunkSequence() {
@@ -277,20 +354,26 @@
         }
 
         generateTree() {
-            let trunkSequence = this.generateTrunkSequence(config.sequence);
-            this.root = new SequenceTreeNode(trunkSequence);
-            this.root.left = this.generateLevels(this.height, trunkSequence, trunkSequence);
-            this.root.right = this.generateLevels(this.height, trunkSequence, trunkSequence);
+            this.root.left = this.generateLevels(this.height, this.trunkSequence, this.trunkSequence);
+            this.root.right = this.generateLevels(this.height, this.trunkSequence, this.trunkSequence);
+        }
+
+        regenerateTree() {
+            this.trunkSequence.update();
+            this.stop();
+            this.paths = [];
+            this.generateTree();
+            this.play();
         }
 
         generateLevels(levelIndex, levelSequence, pathSequence) {
             if (levelIndex <= 0) {
-                this.paths.push(pathSequence);
+                if (!this.paths.includes(pathSequence)) this.paths.push(pathSequence);
                 return null;
             }
             let transformedSequence = levelSequence.transform();
             let node = new SequenceTreeNode(transformedSequence);
-            let mergedSequence = levelSequence.merge(transformedSequence);
+            let mergedSequence = pathSequence.merge(transformedSequence);
             node.left = this.generateLevels(levelIndex - 1, transformedSequence, mergedSequence);
             node.right = this.generateLevels(levelIndex - 1, transformedSequence, mergedSequence);
             return node;
@@ -374,7 +457,7 @@
                 sequencerControlChangeHandlers[event.detail.knobId](event.detail.value);
                 break;
         }
-        //if (!event.detail.isOnMount) fractalTree.generateTree();
+        if (!event.detail.isOnMount) fractalTree.regenerateTree();
     }
 
     function handleFractalKnobValueChanged(event) {
@@ -390,7 +473,6 @@
 
     function handleSequenceLengthChange(newValue) {
         fractalTree.trunkSequence.state.length = newValue;
-        fractalTree.trunkSequence.update();
     }
 
     function handleSequenceTempoChange(newValue) {
@@ -400,28 +482,19 @@
 
     function handleSequenceScaleChange(newValue) {
         fractalTree.trunkSequence.state.scale = newValue;
-        let newScaleNotes = Utilities.getNotesForScale(newValue);
-        for (let i = 0; i < fractalTree.trunkSequence.state.length; i++) {
-            let oldNoteIndex = noteKnobsProps[i].valueIndex;
-            let oldNoteMaxIndex = noteKnobsProps[i].maxValueIndex;
-            let newNoteValues = [""].concat(newScaleNotes);
-            let newNoteIndex = Utilities.convertRange(0, oldNoteMaxIndex, 0, newScaleNotes.length, oldNoteIndex);
-            let newStepNote = newNoteValues[newNoteIndex];
-            noteKnobsProps[i] = getKnobProps(i, "", newNoteValues, newStepNote);
-            fractalTree.trunkSequence.steps[i].note = newStepNote;
-        }
+        fractalTree.trunkSequence.changeScale(newValue);
+        let newScaleNotes = [""].concat(Utilities.getNotesForScale(newValue));
+        fractalTree.trunkSequence.steps.forEach((step, index) => {
+            noteKnobsProps[index] = getKnobProps(index, "", newScaleNotes, step.note);
+        });
     }
 
     function handleSequenceOrderChange(newValue) {
         fractalTree.trunkSequence.state.order = newValue;
-        fractalTree.trunkSequence.update();
     }
 
     function handleSequenceTransposeChange(newValue) {
         fractalTree.trunkSequence.state.transpose = newValue;
-        fractalTree.trunkSequence.steps.forEach((step) => {
-            step.transpose = newValue;
-        })
     }
 
     function handleSequenceTimeDivisionChange(newValue) {
@@ -431,14 +504,10 @@
 
     function handleSequenceRepeatChange(newValue) {
         fractalTree.trunkSequence.state.repeat = newValue;
-        fractalTree.trunkSequence.update();
     }
 
     function handleSequenceSlewChange(newValue) {
         fractalTree.trunkSequence.state.slew = newValue;
-        fractalTree.trunkSequence.steps.forEach((step) => {
-            step.slew = newValue;
-        })
     }
 
     function handleFractalBranchesChange(newValue) {

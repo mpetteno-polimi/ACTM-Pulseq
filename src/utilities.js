@@ -5,7 +5,8 @@ import * as Tone from "tone";
 
 export {
     getRandom,
-    getRandomInt
+    getRandomInt,
+    randomChoice
 };
 
 /**
@@ -28,20 +29,57 @@ function getRandomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+function randomChoice(firstChoice, secondChoice) {
+    return Math.random() < 0.5 ? firstChoice : secondChoice;
+}
+
+/* --------------------------------------------- OBJECTS -------------------------------------------- */
+
+export {
+    cloneObject
+};
+
+/**
+ * @function
+ * @description Deep clone a class instance.
+ * @param {object} instance The class instance you want to clone.
+ * @returns {object} A new cloned instance.
+ */
+function cloneObject(instance) {
+    return Object.assign(
+        Object.create(
+            // Set the prototype of the new object to the prototype of the instance.
+            // Used to allow new object behave like class instance.
+            Object.getPrototypeOf(instance),
+            Object.getOwnPropertyDescriptors(instance)
+        ),
+        instance
+    );
+}
+
 /* --------------------------------------------- ARRAYS --------------------------------------------- */
 
 export {
+    cloneArray,
     convertRange,
     getArray,
+    getRandomSubarray,
     getRange,
     repeatElements,
     shuffleArray
 };
 
+
+const cloneArray = (arrayToClone) => {
+    return arrayToClone.map(a => {
+        return cloneObject(a);
+    })
+}
+
 /**
  * Converts current degree to value and viceversa
  */
-const convertRange = (oldMin, oldMax, newMin, newMax, oldValue)  => {
+const convertRange = (oldMin, oldMax, newMin, newMax, oldValue) => {
     return Math.floor((oldValue - oldMin) * (newMax - newMin) / (oldMax - oldMin) + newMin);
 }
 
@@ -68,16 +106,24 @@ const getRange = (min, max) => {
     return getArray(rangeLength, (_, index) => min + index);
 }
 
+function getRandomSubarray(array, subarraySize = getRandomInt(0, array.length)) {
+    let shuffledArray = shuffleArray(array);
+    return shuffledArray.slice(0, subarraySize);
+}
+
 function shuffleArray(array) {
-    let currentIndex = array.length, randomIndex;
+    let shuffledArray = cloneArray(array);
+    let currentIndex = shuffledArray.length;
+    let randomIndex;
     // While there remain elements to shuffle.
     while (currentIndex !== 0) {
         // Pick a remaining element.
         randomIndex = Math.floor(Math.random() * currentIndex);
         currentIndex--;
         // And swap it with the current element.
-        [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+        [shuffledArray[currentIndex], shuffledArray[randomIndex]] = [shuffledArray[randomIndex], shuffledArray[currentIndex]];
     }
+    return shuffledArray;
 }
 
 function repeatElements(array, repetitionNumber) {
@@ -87,11 +133,15 @@ function repeatElements(array, repetitionNumber) {
 /* ----------------------------------------- MUSIC ----------------------------------------- */
 
 export {
+    compareNotes,
     getNotesForScale,
     generateMelody,
+    lowerNote,
     toggleMasterMute,
     transposeNoteBySemitones,
-    getSequenceSubdivisionForTimeDivision
+    getSequenceSubdivisionForTimeDivision,
+    raiseNote,
+    swapOctave
 };
 
 function getNotesForScale(scaleName, startNote = "A", startOctave = 3) {
@@ -106,7 +156,8 @@ function getNotesForScale(scaleName, startNote = "A", startOctave = 3) {
 function generateMelody(scaleName, length) {
     return getArray(length, () => {
         let scaleNotes = getNotesForScale(scaleName);
-        return scaleNotes[getRandomInt(0, scaleNotes.length - 1)];
+        let randomIndex = getRandomInt(0, scaleNotes.length - 1);
+        return scaleNotes[randomIndex];
     });
 }
 
@@ -114,11 +165,45 @@ function toggleMasterMute() {
     Tone.getDestination().mute = !Tone.getDestination().mute;
 }
 
-function transposeNoteBySemitones(note, semitones) {
+function transposeNoteBySemitones(note, semitones = this.randomChoice(-12, 12)) {
     let transposeInterval = Tonal.Interval.fromSemitones(semitones);
     return note === "" ? null : Tonal.Note.transpose(note, transposeInterval);
 }
 
 function getSequenceSubdivisionForTimeDivision(timeDivision) {
     return timeDivision + "n";
+}
+
+function swapOctave(note1, note2) {
+    if (note1 !== note2) {
+        let tonalNote1 = Tonal.Note.get(note1);
+        let tonalNote2 = Tonal.Note.get(note2);
+        if (tonalNote1.oct === tonalNote2.oct) {
+            return [tonalNote2.pc + tonalNote1.oct, tonalNote1.pc + (tonalNote2.oct + 1)];
+        } else {
+            return [tonalNote2.pc + tonalNote1.oct, tonalNote1.pc + tonalNote2.oct];
+        }
+    } else {
+        return [note1, note2];
+    }
+}
+
+function compareNotes(note1, note2) {
+    return Tonal.Midi.toMidi(note1) > Tonal.Midi.toMidi(note2);
+}
+
+function lowerNote(noteToLower, referenceNote) {
+    let lowedNote = noteToLower;
+    while (compareNotes(lowedNote, referenceNote)) {
+        lowedNote = transposeNoteBySemitones(lowedNote, -12);
+    }
+    return lowedNote;
+}
+
+function raiseNote(noteToRaise, referenceNote) {
+    let raisedNote = noteToRaise;
+    while (!compareNotes(raisedNote, referenceNote)) {
+        raisedNote = transposeNoteBySemitones(raisedNote, 12);
+    }
+    return raisedNote;
 }
