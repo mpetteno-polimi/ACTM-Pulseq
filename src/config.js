@@ -7,7 +7,7 @@ export const config = {
                 label: "branches",
                 min: 0,
                 max: 7,
-                init: 1,
+                init: 0,
                 get values() {
                     return Utilities.getRange(this.min, this.max);
                 }
@@ -53,7 +53,7 @@ export const config = {
             tempo: {
                 label: "tempo",
                 min: 30,
-                max: 240,
+                max: 170,
                 init: 120,
                 get values() {
                     return Utilities.getRange(this.min, this.max);
@@ -85,7 +85,7 @@ export const config = {
                 label: "div/mult",
                 min: 0,
                 max: 8,
-                init: 8,
+                init: 2**4,
                 get values() {
                     return Utilities.getArray(this.max - this.min + 1, (_, i) => 2 ** i);
                 }

@@ -36,7 +36,8 @@ function randomChoice(firstChoice, secondChoice) {
 /* --------------------------------------------- OBJECTS -------------------------------------------- */
 
 export {
-    cloneObject
+    cloneObject,
+    TreeNode
 };
 
 /**
@@ -55,6 +56,17 @@ function cloneObject(instance) {
         ),
         instance
     );
+}
+
+/* --------------------------------------------- DATAT STRUCTURE -------------------------------------------- */
+
+class TreeNode {
+    constructor(value, parent = null) {
+        this.value = value;
+        this.parent = parent;
+        this.left = null;
+        this.right = null;
+    }
 }
 
 /* --------------------------------------------- ARRAYS --------------------------------------------- */
@@ -127,7 +139,7 @@ function shuffleArray(array) {
 }
 
 function repeatElements(array, repetitionNumber) {
-    return array.flatMap(i => Array.from({length: repetitionNumber}).fill(i))
+    return cloneArray(array).flatMap(i => Array.from({length: repetitionNumber}).fill(i))
 }
 
 /* ----------------------------------------- MUSIC ----------------------------------------- */
@@ -167,7 +179,7 @@ function toggleMasterMute() {
 
 function transposeNoteBySemitones(note, semitones = this.randomChoice(-12, 12)) {
     let transposeInterval = Tonal.Interval.fromSemitones(semitones);
-    return note === "" ? null : Tonal.Note.transpose(note, transposeInterval);
+    return !note ? null : Tonal.Note.transpose(note, transposeInterval);
 }
 
 function getSequenceSubdivisionForTimeDivision(timeDivision) {
@@ -189,10 +201,13 @@ function swapOctave(note1, note2) {
 }
 
 function compareNotes(note1, note2) {
-    return Tonal.Midi.toMidi(note1) > Tonal.Midi.toMidi(note2);
+    let tonalNote1 = Tonal.Note.get(note1);
+    let tonalNote2 = Tonal.Note.get(note2);
+    return Tonal.Note.ascending(tonalNote1, tonalNote2) > 0;
 }
 
 function lowerNote(noteToLower, referenceNote) {
+    if (noteToLower === referenceNote) return noteToLower;
     let lowedNote = noteToLower;
     while (compareNotes(lowedNote, referenceNote)) {
         lowedNote = transposeNoteBySemitones(lowedNote, -12);
@@ -201,6 +216,7 @@ function lowerNote(noteToLower, referenceNote) {
 }
 
 function raiseNote(noteToRaise, referenceNote) {
+    if (noteToRaise === referenceNote) return noteToRaise;
     let raisedNote = noteToRaise;
     while (!compareNotes(raisedNote, referenceNote)) {
         raisedNote = transposeNoteBySemitones(raisedNote, 12);
