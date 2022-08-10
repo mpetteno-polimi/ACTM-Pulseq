@@ -145,38 +145,16 @@
             this.sequence.stop();
         }
 
-        getStepsForCurrentState() {
-            let steps = Utilities.cloneArray(this.steps).slice(0, this.state.length);
-            switch (this.state.order) {
-                case "forward":
-                    break;
-                case "backward":
-                    steps.reverse();
-                    break;
-                case "pendulum":
-                    let pendulumSteps = Utilities.cloneArray(steps).slice(1, this.state.length - 1).reverse();
-                    steps = steps.concat(pendulumSteps);
-                    break;
-                case "random":
-                    steps = Utilities.shuffleArray(steps);
-                    break;
-            }
-            steps.forEach((step) => {
-                step.transpose = this.state.transpose;
-                step.slew = this.state.slew;
-            });
-            return Utilities.repeatElements(steps, this.state.repeat);
-        }
-
         changeScale(newScale) {
-            let oldScaleNotes = Utilities.getNotesForScale(this.state.scale);
-            let newScaleNotes = Utilities.getNotesForScale(newScale);
+            let oldScaleNotes = this.state.scaleNotes;
+            let newScaleNotes = [""].concat(Utilities.getNotesForScale(newScale));
             this.steps.forEach((step) => {
-                let oldNoteIndex = oldScaleNotes.indexOf(step.note) + 1;
-                let oldNoteMaxIndex = oldScaleNotes.length;
-                let newNoteIndex = Utilities.convertRange(0, oldNoteMaxIndex, 0, newScaleNotes.length, oldNoteIndex);
+                let oldNoteIndex = oldScaleNotes.indexOf(step.note);
+                let oldNoteMaxIndex = oldScaleNotes.length - 1;
+                let newNoteIndex = Utilities.convertRange(0, oldNoteMaxIndex, 0, newScaleNotes.length - 1, oldNoteIndex);
                 step.note = newScaleNotes[newNoteIndex];
             });
+            return newScaleNotes;
         }
 
     }
@@ -196,7 +174,6 @@
                 type: 'module'
             });
             this.treeGenerator.onmessage = (event) => {
-                console.log("result", event)
                 this.root = event.data[0];
                 this.paths = event.data[1];
                 this.stop();
@@ -212,6 +189,7 @@
                 length: sequenceConfig.controls.length.init,
                 tempo: sequenceConfig.controls.tempo.init,
                 scale: sequenceConfig.controls.scale.init,
+                scaleNotes: [""].concat(Utilities.getNotesForScale(sequenceConfig.controls.scale.init)),
                 order: sequenceConfig.controls.order.init,
                 transpose: sequenceConfig.controls.transpose.init,
                 timeDivision: sequenceConfig.controls.timeDivision.init,
@@ -222,7 +200,7 @@
         }
 
         regenerateTree() {
-            this.treeGenerator.postMessage([this.height, this.trunkSequence.getStepsForCurrentState()]);
+            this.treeGenerator.postMessage([this.height, this.trunkSequence.steps, this.trunkSequence.state]);
         }
 
         play(pathIndex = 1) {
@@ -324,9 +302,9 @@
     }
 
     function handleSequenceScaleChange(newValue) {
+        let newScaleNotes = fractalTree.trunkSequence.changeScale(newValue);
         fractalTree.trunkSequence.state.scale = newValue;
-        fractalTree.trunkSequence.changeScale(newValue);
-        let newScaleNotes = [""].concat(Utilities.getNotesForScale(newValue));
+        fractalTree.trunkSequence.state.scaleNotes = newScaleNotes;
         fractalTree.trunkSequence.steps.forEach((step, index) => {
             noteKnobsProps[index] = getKnobProps(index, "", newScaleNotes, step.note);
         });

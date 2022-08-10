@@ -41,8 +41,9 @@ class StepUtilities {
 
 class SequenceTransformation {
 
-    constructor(steps) {
+    constructor(steps, state) {
         this.steps = steps;
+        this.state = state;
     }
 
     transform(transformationType = SEQUENCE_TRANSFORMATION_TYPE.random) {
@@ -60,7 +61,30 @@ class SequenceTransformation {
 
     merge(sequenceToMerge) {
         let mergedSteps = Utilities.cloneArray(this.steps).concat(sequenceToMerge.steps);
-        return new SequenceTransformation(mergedSteps);
+        return new SequenceTransformation(mergedSteps, this.state);
+    }
+
+    getSequenceForCurrentState() {
+        let steps = Utilities.cloneArray(this.steps).slice(0, this.state.length);
+        switch (this.state.order) {
+            case "forward":
+                break;
+            case "backward":
+                steps.reverse();
+                break;
+            case "pendulum":
+                let pendulumSteps = Utilities.cloneArray(steps).slice(1, this.state.length - 1).reverse();
+                steps = steps.concat(pendulumSteps);
+                break;
+            case "random":
+                steps = Utilities.shuffleArray(steps);
+                break;
+        }
+        steps.forEach((step) => {
+            step.transpose = this.state.transpose;
+            step.slew = this.state.slew;
+        });
+        return new SequenceTransformation(Utilities.repeatElements(steps, this.state.repeat), this.state);
     }
 
     _transpose(semitones = Utilities.randomChoice(-12, 12)) {
@@ -68,7 +92,7 @@ class SequenceTransformation {
         transposedSteps.forEach((transposedStep) => {
             transposedStep.note = Utilities.transposeNoteBySemitones(transposedStep.note, semitones);
         });
-        return new SequenceTransformation(transposedSteps);
+        return new SequenceTransformation(transposedSteps, this.state);
     }
 
     _invert() {
@@ -79,7 +103,7 @@ class SequenceTransformation {
         emptySteps.forEach((step) => {
             invertedStep.splice(step.id, 0, step);
         })
-        return new SequenceTransformation(invertedStep);
+        return new SequenceTransformation(invertedStep, this.state);
     }
 
     _invertInternal(orderedSteps) {
@@ -122,7 +146,7 @@ class SequenceTransformation {
         revertedSteps.forEach((revertedStep, index) => {
             revertedStep.id = index;
         });
-        return new SequenceTransformation(revertedSteps);
+        return new SequenceTransformation(revertedSteps, this.state);
     }
 
     _mutate() {
@@ -131,23 +155,25 @@ class SequenceTransformation {
         stepsToMutate.forEach((step) => {
             mutatedSteps[step.id].note = Utilities.transposeNoteBySemitones(step.note);
         });
-        return new SequenceTransformation(mutatedSteps);
+        return new SequenceTransformation(mutatedSteps, this.state);
     }
 
 }
 
 class SequenceTreeGenerator {
 
-    constructor(height, trunkSequenceSteps) {
+    constructor(height, trunkSequenceSteps, trunkSequenceState) {
         this.height = height;
-        this.root = new Utilities.TreeNode(new SequenceTransformation(trunkSequenceSteps));
+        this.root = new Utilities.TreeNode(new SequenceTransformation(trunkSequenceSteps, trunkSequenceState));
         this.paths = [];
         this.generateTree();
     }
 
     generateTree() {
-        this.root.left = this._generateLevels(this.height, this.root.value, this.root.value, true);
-        this.root.right = this._generateLevels(this.height, this.root.value, this.root.value, false);
+        this.root.left = this._generateLevels(this.height, this.root.value,
+            this.root.value.getSequenceForCurrentState(), true);
+        this.root.right = this._generateLevels(this.height, this.root.value,
+            this.root.value.getSequenceForCurrentState(), false);
     }
 
     _generateLevels(levelIndex, levelSequence, pathSequence, isPathSequenceToAdd) {
@@ -157,7 +183,7 @@ class SequenceTreeGenerator {
         }
         let transformedSequence = levelSequence.transform();
         let node = new Utilities.TreeNode(transformedSequence);
-        let mergedSequence = pathSequence.merge(transformedSequence);
+        let mergedSequence = pathSequence.merge(transformedSequence.getSequenceForCurrentState());
         node.left = this._generateLevels(levelIndex - 1, transformedSequence, mergedSequence, true);
         node.right = this._generateLevels(levelIndex - 1, transformedSequence, mergedSequence, false);
         return node;
@@ -166,7 +192,9 @@ class SequenceTreeGenerator {
 }
 
 onmessage = (event) => {
-    console.log("worker", event)
-    let sequenceTreeGenerator = new SequenceTreeGenerator(event.data[0], event.data[1]);
+    let treeHeight = event.data[0];
+    let trunkSequenceStep = event.data[1];
+    let trunkSequenceState = event.data[2];
+    let sequenceTreeGenerator = new SequenceTreeGenerator(treeHeight, trunkSequenceStep, trunkSequenceState);
     postMessage([sequenceTreeGenerator.root, sequenceTreeGenerator.paths]);
 }
