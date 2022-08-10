@@ -53,7 +53,7 @@ export const config = {
             tempo: {
                 label: "tempo",
                 min: 30,
-                max: 170,
+                max: 220,
                 init: 120,
                 get values() {
                     return Utilities.getRange(this.min, this.max);

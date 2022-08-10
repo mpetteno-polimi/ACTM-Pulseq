@@ -91,6 +91,11 @@
     let fractalKnobs = [fractalKnobsProps, fractalControlKnobsProps];
     let activeKnobs = [sequencerKnobs[DEFAULT_MODE], fractalKnobs[DEFAULT_MODE]];
 
+    function resetPathKnob(newValue = fractalTree.height) {
+        fractalKnobsProps[1] = getKnobProps(1, "path", Utilities.getRange(1, 2 ** newValue), 1);
+        activeKnobs[KNOBS_TYPE.FRACTAL_KNOBS][1] = fractalKnobsProps[1];
+    }
+
     function updateActiveKnobsProps(event, knobsType) {
         let targetKnobProps = activeKnobs[knobsType][event.detail.knobId];
         if (targetKnobProps) {
@@ -137,8 +142,8 @@
         }
 
         start() {
-            Tone.Transport.bpm.value = this.state.tempo;
-            this.sequence.start();
+            Tone.Transport.bpm.rampTo(this.state.tempo, 0.1);
+            this.sequence.start(0);
         }
 
         stop() {
@@ -279,7 +284,10 @@
                 sequencerControlChangeHandlers[event.detail.knobId](event.detail.value);
                 break;
         }
-        if (!event.detail.isOnMount) fractalTree.regenerateTree();
+        if (!event.detail.isOnMount) {
+            fractalTree.regenerateTree();
+            resetPathKnob();
+        }
     }
 
     function handleFractalKnobValueChanged(event) {
@@ -333,8 +341,7 @@
     function handleFractalBranchesChange(newValue) {
         fractalTree.height = newValue;
         fractalTree.regenerateTree();
-        fractalKnobsProps[1] = getKnobProps(1, "path", Utilities.getRange(1, 2 ** newValue), 1);
-        activeKnobs[KNOBS_TYPE.FRACTAL_KNOBS][1] = fractalKnobsProps[1];
+        resetPathKnob(newValue);
         isFractalActive = newValue > 0;
     }
 
