@@ -178,7 +178,7 @@ function toggleMasterMute() {
     Tone.getDestination().mute = !Tone.getDestination().mute;
 }
 
-function transposeNoteBySemitones(note, semitones = this.randomChoice(-12, 12)) {
+function transposeNoteBySemitones(note, semitones = randomChoice(-12, 12)) {
     let transposeInterval = Tonal.Interval.fromSemitones(semitones);
     return !note ? null : Tonal.Note.transpose(note, transposeInterval);
 }
