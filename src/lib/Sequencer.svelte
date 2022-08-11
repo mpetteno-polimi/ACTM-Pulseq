@@ -18,6 +18,7 @@
     let effectsList = Object.keys(effects).map(function(key) {
         return effects[key];
     });
+    Tone.Transport.syncSignal(effects.delay.delayTime);
 
     let synths;
     synthStore.subscribe(value => {
