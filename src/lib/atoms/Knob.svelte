@@ -103,9 +103,9 @@
         {/each}
     </div>
     <div class="knob outer"
-         style="--size: {size}px; --margin: {margin}px; --rotation: {degree + 1}; --random: {Math.random()*100}"
+         style="--size: {size}px; --margin: {margin}px; --rotation: {degree}; --random: {Math.random()*100}"
          on:mousedown|preventDefault={startDrag}>
-        <div class="knob inner" style="--size: {size}px; --rotation: {degree + 1};">
+        <div class="knob inner" style="--size: {size}px; --rotation: {degree};">
             <div class="grip"></div>
         </div>
     </div>

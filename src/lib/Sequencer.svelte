@@ -38,7 +38,7 @@
         return {
             id: id,
             label: label,
-            numTicks: values.length,
+            numTicks: values.length - 1,
             valueIndex: initialValueIndex,
             minValueIndex: minValueIndex,
             maxValueIndex: maxValueIndex,
