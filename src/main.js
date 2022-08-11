@@ -1,4 +1,4 @@
-import App from './FractalSequencer.svelte'
+import App from './Pulseq.svelte'
 
 const app = new App({
   target: document.getElementById('app')
