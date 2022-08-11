@@ -145,9 +145,43 @@ export const config = {
         }
     },
     ui: {
+        sequencer: {
+            transition: {
+                in: {
+                    delay: 5,
+                    duration: 5000
+                },
+                out: {
+                    delay: 0,
+                    duration: 0
+                }
+            }
+        },
         knobs: {
             startAngle: 45,
-            endAngle: 315
+            endAngle: 315,
+            transitions : {
+                label: {
+                    in: {
+                        delay: 0,
+                        duration: 800
+                    },
+                    out: {
+                        delay: 0,
+                        duration: 650
+                    }
+                },
+                tooltip: {
+                    in: {
+                        delay: 0,
+                        duration: 500
+                    },
+                    out: {
+                        delay: 0,
+                        duration: 500
+                    }
+                }
+            }
         },
         leds: {
             minBlinkDuration: 0.2

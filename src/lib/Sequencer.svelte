@@ -378,6 +378,8 @@
 
     onMount(() => {
         Tone.Transport.start();
+        Tone.Destination.volume.value = -16;
+        Tone.Destination.volume.rampTo(-3, config.ui.sequencer.transition.in.duration / 1000);
     });
 
 </script>
@@ -386,7 +388,7 @@
                on:keyup|preventDefault={handleKeyUp}
                on:beforeunload={handleBeforeUnload}/>
 
-<fractal-sequencer in:fade>
+<fractal-sequencer in:fade={config.ui.sequencer.transition.in}>
     <sequencer>
         {#each activeKnobs[KNOBS_TYPE.SEQUENCER_KNOBS] as activeSequencerKnob, i}
             {#if i % 2 === 0}

@@ -1,4 +1,5 @@
 <script>
+    import {config} from "../../config.js";
     import {createEventDispatcher, onMount} from 'svelte';
     import {fade} from 'svelte/transition';
     import {convertRange} from "../../utilities.js";
@@ -81,18 +82,22 @@
 <svelte:window on:mouseup|preventDefault={endDrag}/>
 
 {#if label}
-    <span class="label title" in:fade out:fade>{label}</span>
+    {#key label}
+        <span class="label title" in:fade={config.ui.knobs.transitions.label.in}
+              out:fade={config.ui.knobs.transitions.label.out}>{label}</span>
+    {/key}
 {/if}
 
 {#if isTooltipEnabled}
     <div class="tooltip {tooltipPosition}">
         {#if selectedValue}
-            <span class="label" in:fade out:fade>{selectedValue}</span>
+            <span class="label" in:fade={config.ui.knobs.transitions.tooltip.in}
+                  out:fade={config.ui.knobs.transitions.tooltip.out}>{selectedValue}</span>
         {/if}
     </div>
 {/if}
 
-<div class="knob" style="--size: {size + 20}px;" in:fade out:fade>
+<div class="knob" style="--size: {size + 20}px;">
     <div class="ticks" >
         {#each Array.from({length: (endAngle - startAngle) / (fullAngle / numTicks) + 1}, (_, i) => startAngle +
             (i * (fullAngle / numTicks))) as tickDegree, index}
