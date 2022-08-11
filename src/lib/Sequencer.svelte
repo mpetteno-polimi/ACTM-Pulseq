@@ -1,5 +1,6 @@
 <script>
     import {synthStore} from '../stores.js';
+    import {effectStore} from '../stores.js';
     import {config} from "../config.js";
     import {onMount} from "svelte";
     import {fade} from 'svelte/transition';
@@ -8,13 +9,24 @@
     import Knob from "./atoms/Knob.svelte";
     import Led from "./atoms/Led.svelte";
 
-    /* --------------------------------------------- GLOBAL VARIABLES --------------------------------------------- */
+    /* ------------------------------------------- SYNTHS AND EFFECTS -------------------------------------------- */
 
-    /* -- Get synth object from stores -- */
+    let effects;
+    effectStore.subscribe(value => {
+        effects = value;
+    });
+    let effectsList = Object.keys(effects).map(function(key) {
+        return effects[key];
+    });
+
     let synths;
     synthStore.subscribe(value => {
         synths = value;
     });
+    Object.keys(synths).forEach((key) => {
+        synths[key].chain(...effectsList, Tone.Destination);
+    })
+    let currentSynth = synths[config.sequence.synth];
 
     /* --------------------------------------------- COMPONENTS PROPS --------------------------------------------- */
 
@@ -56,7 +68,10 @@
     });
 
     /* ------ FRACTAL CONTROL KNOBS PROPS ------ */
-    let fractalControlKnobsProps = [...Array(3)];
+    let fractalControlKnobsProps = Object.keys(config.effects).map((controlKey, index) => {
+        let currentKnobDefaults = config.effects[controlKey];
+        return getKnobProps(index, currentKnobDefaults.label, currentKnobDefaults.values, currentKnobDefaults.init);
+    });
 
     /* ------ LEDs PROPS ------ */
     let ledsProps = Utilities.getArray(config.sequence.stepNumber, () => ({
@@ -131,13 +146,12 @@
         }
 
         onSequenceStep(time, step) {
-            let synth = synths[config.sequence.synth];
             let note = Utilities.transposeNoteBySemitones(step.note, step.transpose);
             let duration = this.subdivision - (this.subdivision > config.sequence.stepDurationOffset
                 ? config.sequence.stepDurationOffset : 0);
             let velocity = step.velocity;
-            synth.portamento = duration * step.slew;
-            synth.triggerAttackRelease(note, duration, time, velocity);
+            currentSynth.portamento = duration * step.slew;
+            currentSynth.triggerAttackRelease(note, duration, time, velocity);
             blinkLed(step.id, duration, time);
         }
 
@@ -209,7 +223,6 @@
         }
 
         play(pathIndex = 1) {
-            console.assert(pathIndex > 0 && pathIndex <= this.paths.length, "Path index is not valid");
             this.playingPath = pathIndex - 1;
             this.playingSequence = new Sequence(this.paths[this.playingPath], this.trunkSequence.state);
             this.playingSequence.start();
@@ -221,6 +234,10 @@
                 this.playingSequence = null;
                 this.playingPath = -1;
             }
+        }
+
+        changeSound(newSound) {
+            currentSynth = synths[newSound];
         }
 
     }
@@ -242,7 +259,7 @@
     const fractalControlChangeHandlers = [
         handleFractalBranchesChange,
         handleFractalPathChange,
-        handleFractalMutationChange
+        handleFractalSoundChange
     ]
 
     function handleKeyDown(event) {
@@ -279,6 +296,7 @@
         switch (activeMode) {
             case MODES.SEQUENCE_MODE:
                 fractalTree.trunkSequence.steps[event.detail.knobId].note = event.detail.value;
+                resetPathKnob();
                 break;
             case MODES.GLOBAL_CONTROL_MODE:
                 sequencerControlChangeHandlers[event.detail.knobId](event.detail.value);
@@ -286,7 +304,6 @@
         }
         if (!event.detail.isOnMount) {
             fractalTree.regenerateTree();
-            resetPathKnob();
         }
     }
 
@@ -297,6 +314,7 @@
                 fractalControlChangeHandlers[event.detail.knobId](event.detail.value);
                 break;
             case MODES.GLOBAL_CONTROL_MODE:
+                effectsList[event.detail.knobId].wet.value = event.detail.value;
                 break;
         }
     }
@@ -342,7 +360,6 @@
         fractalTree.height = newValue;
         fractalTree.regenerateTree();
         resetPathKnob(newValue);
-        isFractalActive = newValue > 0;
     }
 
     function handleFractalPathChange(newValue) {
@@ -350,14 +367,13 @@
         fractalTree.play(newValue);
     }
 
-    function handleFractalMutationChange(newValue) {
-
+    function handleFractalSoundChange(newValue) {
+        fractalTree.changeSound(newValue);
     }
 
     /* --------------------------------------------- INITIALIZATION --------------------------------------------- */
 
     let fractalTree = new SequenceTree();
-    let isFractalActive = false;
 
     onMount(() => {
         Tone.Transport.start();
@@ -402,15 +418,8 @@
     <fractal>
         {#each activeKnobs[KNOBS_TYPE.FRACTAL_KNOBS] as activeFractalKnob, i}
             <fractal-item>
-                {#if i === 1}
-                    {#if isFractalActive}
-                        <Knob {...activeFractalKnob} tooltipPosition="right"
-                              on:knobValueChanged={handleFractalKnobValueChanged}/>
-                    {/if}
-                {:else}
-                    <Knob {...activeFractalKnob} tooltipPosition="right"
-                          on:knobValueChanged={handleFractalKnobValueChanged}/>
-                {/if}
+                <Knob {...activeFractalKnob} tooltipPosition="right"
+                      on:knobValueChanged={handleFractalKnobValueChanged}/>
             </fractal-item>
         {/each}
     </fractal>

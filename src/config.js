@@ -23,14 +23,11 @@ export const config = {
                     return Utilities.getRange(this.min, this.max);
                 }
             },
-            mutation: {
-                label: "mutation",
-                min: 0,
-                max: 10,
-                init: 0,
-                get values() {
-                    return Utilities.getArray(this.max - this.min + 1, (_, i) => i / 10);
-                }
+            sounds: {
+                label: "sounds",
+                init: "fmSynth",
+                values: ["amSynth", "duoSynth", "fmSynth", "membraneSynth", "metalSynth", "monoSynth",
+                    "noiseSynth", "pluckSynth"]
             }
         }
     },
@@ -53,7 +50,7 @@ export const config = {
             tempo: {
                 label: "tempo",
                 min: 30,
-                max: 220,
+                max: 240,
                 init: 120,
                 get values() {
                     return Utilities.getRange(this.min, this.max);
@@ -61,8 +58,6 @@ export const config = {
             },
             scale: {
                 label: "scale",
-                min: 30,
-                max: 240,
                 init: "major",
                 values: ["chromatic", "major", "minor", "major pentatonic", "minor pentatonic", "harmonic minor",
                     "whole tone", "random"]
@@ -119,6 +114,35 @@ export const config = {
         stepDurationOffset: 0.1,
         defaultStepDuration: 1,
         minStepVelocity: 0.5
+    },
+    effects: {
+        distortion: {
+            label: "distortion",
+            min: 0,
+            max: 10,
+            init: 0.1,
+            get values() {
+                return Utilities.getArray(this.max - this.min + 1, (_, i) => i / 10);
+            }
+        },
+        reverb: {
+            label: "reverb",
+            min: 0,
+            max: 10,
+            init: 0.5,
+            get values() {
+                return Utilities.getArray(this.max - this.min + 1, (_, i) => i / 10);
+            }
+        },
+        delay: {
+            label: "delay",
+            min: 0,
+            max: 10,
+            init: 0.5,
+            get values() {
+                return Utilities.getArray(this.max - this.min + 1, (_, i) => i / 10);
+            }
+        }
     },
     ui: {
         knobs: {

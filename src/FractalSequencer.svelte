@@ -3,6 +3,7 @@
     import Synth from './lib/Synth.svelte'
     import Sequencer from "./lib/Sequencer.svelte";
     import SplashScreen from "./lib/SplashScreen.svelte";
+    import Effect from "./lib/Effect.svelte";
 
     let started = false;
 
@@ -20,6 +21,7 @@
         <SplashScreen on:interaction={startAudioContext} />
     {:else}
         <Synth/>
+        <Effect/>
         <Sequencer/>
     {/if}
 </main>
