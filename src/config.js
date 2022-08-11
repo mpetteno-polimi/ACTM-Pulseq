@@ -158,6 +158,7 @@ export const config = {
             }
         },
         splashScreen : {
+            text: "the eternal loop of everything",
             transition: {
                 in: {
                     delay: 0,
@@ -165,7 +166,7 @@ export const config = {
                 },
                 out: {
                     delay: 0,
-                    duration: 4000
+                    duration: 3250
                 }
             }
         },

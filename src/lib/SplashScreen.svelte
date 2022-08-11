@@ -2,7 +2,6 @@
     import {config} from "../config.js";
     import {fade} from 'svelte/transition';
     import {createEventDispatcher} from "svelte";
-    import Pulsar from "./atoms/Pulsar.svelte";
 
     /* -- Event dispatcher -- */
     const dispatch = createEventDispatcher();
@@ -14,8 +13,7 @@
 
 <svelte:window on:click={dispatchInteractionEvent} on:keydown={dispatchInteractionEvent} />
 <splash-screen out:fade={config.ui.splashScreen.transition.out}>
-    <Pulsar/>
-    <span>Click anywhere or press a key to start</span>
+    <span>{config.ui.splashScreen.text}</span>
 </splash-screen>
 
 <style>
@@ -36,6 +34,7 @@
     span {
         color: whitesmoke;
         margin: 30px 0;
+        font-size: larger;
     }
 
 </style>
