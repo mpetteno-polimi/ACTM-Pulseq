@@ -152,7 +152,11 @@
                 ? config.sequence.stepDurationOffset : 0);
             let velocity = step.velocity;
             currentSynth.portamento = duration * step.slew;
-            currentSynth.triggerAttackRelease(note, duration, time, velocity);
+            if (currentSynth instanceof Tone.NoiseSynth) {
+                currentSynth.triggerAttackRelease(duration, time, velocity);
+            } else {
+                currentSynth.triggerAttackRelease(note, duration, time, velocity);
+            }
             blinkLed(step.id, duration, time);
         }
 
@@ -303,9 +307,7 @@
                 sequencerControlChangeHandlers[event.detail.knobId](event.detail.value);
                 break;
         }
-        if (!event.detail.isOnMount) {
-            fractalTree.regenerateTree();
-        }
+        if (!event.detail.isOnMount) fractalTree.regenerateTree();
     }
 
     function handleFractalKnobValueChanged(event) {
@@ -378,8 +380,8 @@
 
     onMount(() => {
         Tone.Transport.start();
-        Tone.Destination.volume.value = -16;
-        Tone.Destination.volume.rampTo(-3, config.ui.sequencer.transition.in.duration / 1000);
+        Tone.Destination.volume.value = -24;
+        Tone.Destination.volume.linearRampTo(-3, config.ui.sequencer.transition.in.duration / 1000);
     });
 
 </script>
