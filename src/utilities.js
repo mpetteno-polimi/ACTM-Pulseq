@@ -92,6 +92,7 @@ const cloneArray = (arrayToClone) => {
  * Converts current degree to value and viceversa
  */
 const convertRange = (oldMin, oldMax, newMin, newMax, oldValue) => {
+    if (oldMax - oldMin === 0) return newMin;
     return Math.floor((oldValue - oldMin) * (newMax - newMin) / (oldMax - oldMin) + newMin);
 }
 
