@@ -157,6 +157,18 @@ export const config = {
                 }
             }
         },
+        splashScreen : {
+            transition: {
+                in: {
+                    delay: 0,
+                    duration: 0
+                },
+                out: {
+                    delay: 0,
+                    duration: 4000
+                }
+            }
+        },
         knobs: {
             startAngle: 45,
             endAngle: 315,

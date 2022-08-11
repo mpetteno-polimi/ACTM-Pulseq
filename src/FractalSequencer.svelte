@@ -4,6 +4,7 @@
     import Sequencer from "./lib/Sequencer.svelte";
     import SplashScreen from "./lib/SplashScreen.svelte";
     import Effect from "./lib/Effect.svelte";
+    import FractalBackground from "./lib/atoms/Background.svelte";
 
     let started = false;
 
@@ -17,6 +18,7 @@
 </script>
 
 <main>
+    <FractalBackground />
     {#if !started}
         <SplashScreen on:interaction={startAudioContext} />
     {:else}
@@ -37,10 +39,6 @@
     :global(body), :global(html) {
         margin: 0;
         overflow: hidden;
-    }
-
-    main {
-        background: #444;
     }
 
 </style>
