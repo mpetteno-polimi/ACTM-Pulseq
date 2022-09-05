@@ -45,7 +45,9 @@ sequence (except the first branch obviously). This allows the musical evolution 
 
 In order to program the *Trunk* sequence, two features have been implemented for each sequencer knob.
 
-![Trunk Knobs](./.github/img/trunk-knobs.png)
+<p align="center">
+  <img alt="Trunk Knobs" src="./.github/img/trunk-knobs.png">
+</p>
 
 **Notes Mode**
 
